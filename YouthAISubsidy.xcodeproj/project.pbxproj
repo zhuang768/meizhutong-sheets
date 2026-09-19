@@ -107,8 +107,8 @@
 		AE4B2975C62FF5EF56F4EC7B /* AwarenessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AwarenessView.swift; sourceTree = "<group>"; };
 		AE84CBEDE5B1A567F9547E8E /* SyntheticFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticFixtures.swift; sourceTree = "<group>"; };
 		AF8970BDACB69ADC4FAD3893 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		B26DFE92C0B6D4565478F220 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		B4E5F8754727C341B0575E6F /* LocalAttachmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAttachmentStore.swift; sourceTree = "<group>"; };
-		C0092F6FC339BD7DA9D0C281 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
 		C8B0C5C7AB2D352AEB0B823E /* AppThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppThemeTests.swift; sourceTree = "<group>"; };
 		D0954B4A791552C36165307A /* YouthAISubsidy.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = YouthAISubsidy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1486199A0CE573523A10EBB /* DemoCaseStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCaseStoreTests.swift; sourceTree = "<group>"; };
@@ -232,7 +232,7 @@
 		BC736ED60B9551A35BF8FF33 /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				C0092F6FC339BD7DA9D0C281 /* Secrets.xcconfig.example */,
+				B26DFE92C0B6D4565478F220 /* Secrets.xcconfig */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -592,7 +592,7 @@
 		};
 		852ADA4833E8D50478DED59C /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C0092F6FC339BD7DA9D0C281 /* Secrets.xcconfig.example */;
+			baseConfigurationReference = B26DFE92C0B6D4565478F220 /* Secrets.xcconfig */;
 			buildSettings = {
 				API_BASE_URL = "https://script.google.com/macros/s/AKfycbwyAHxQL64Wuv5f75N6BSu4fKhqUOZ4ISAB4mtSQ48x_cVCaP2vf8TJF1YIsLy746vfqg/exec";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -627,7 +627,7 @@
 		};
 		8E2A781F67C75CF1A66F377E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C0092F6FC339BD7DA9D0C281 /* Secrets.xcconfig.example */;
+			baseConfigurationReference = B26DFE92C0B6D4565478F220 /* Secrets.xcconfig */;
 			buildSettings = {
 				API_BASE_URL = "https://script.google.com/macros/s/AKfycbwyAHxQL64Wuv5f75N6BSu4fKhqUOZ4ISAB4mtSQ48x_cVCaP2vf8TJF1YIsLy746vfqg/exec";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
