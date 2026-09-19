@@ -1,0 +1,78 @@
+name: YouthAISubsidy
+options:
+  bundleIdPrefix: com.meizhuhackathon
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: zh-Hant
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  YouthAISubsidy:
+    type: application
+    platform: iOS
+    sources:
+      - path: YouthAISubsidy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.meizhuhackathon.YouthAISubsidy
+        PRODUCT_NAME: YouthAISubsidy
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "梅竹通"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "從相簿選取證件或帳單照片，在這支 iPhone 辨識欄位並供你核對；確認後才儲存成受保護的附件，不會上傳。"
+        INFOPLIST_KEY_NSCameraUsageDescription: "拍攝證件或帳單，在這支 iPhone 辨識欄位並供你核對；確認後才儲存成受保護的附件，不會上傳。"
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "本 App 不會把申請附件寫入相簿。"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_EMIT_LOC_STRINGS: YES
+        INFOPLIST_KEY_APIBaseURL: "$(API_BASE_URL)"
+        API_BASE_URL: ""
+        API_CLIENT_KEY: ""
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: YouthAISubsidy/Info.plist
+      properties:
+        UILaunchScreen: {}
+        APIBaseURL: "$(API_BASE_URL)"
+        APIClientKey: "$(API_CLIENT_KEY)"
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: "與同一網路上的 Mac 連線，測試合成申請案件與承辦工作台的狀態連動。"
+        ITSAppUsesNonExemptEncryption: false
+    scheme:
+      testTargets:
+        - YouthAISubsidyTests
+        - YouthAISubsidyUITests
+  YouthAISubsidyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: YouthAISubsidyTests
+    dependencies:
+      - target: YouthAISubsidy
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.meizhuhackathon.YouthAISubsidyTests
+  YouthAISubsidyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: YouthAISubsidyUITests
+    dependencies:
+      - target: YouthAISubsidy
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.meizhuhackathon.YouthAISubsidyUITests
+        TEST_TARGET_NAME: YouthAISubsidy
