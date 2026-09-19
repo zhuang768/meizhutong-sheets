@@ -17,6 +17,9 @@ targets:
     platform: iOS
     sources:
       - path: YouthAISubsidy
+    configFiles:
+      Debug: Config/Secrets.xcconfig
+      Release: Config/Secrets.xcconfig
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.meizhuhackathon.YouthAISubsidy
@@ -36,18 +39,15 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SWIFT_EMIT_LOC_STRINGS: YES
         INFOPLIST_KEY_APIBaseURL: "$(API_BASE_URL)"
-        API_BASE_URL: ""
-        API_CLIENT_KEY: ""
+        API_BASE_URL: "https://script.google.com/macros/s/AKfycbwyAHxQL64Wuv5f75N6BSu4fKhqUOZ4ISAB4mtSQ48x_cVCaP2vf8TJF1YIsLy746vfqg/exec"
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 668963PNG9
     info:
       path: YouthAISubsidy/Info.plist
       properties:
         UILaunchScreen: {}
         APIBaseURL: "$(API_BASE_URL)"
         APIClientKey: "$(API_CLIENT_KEY)"
-        NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
-        NSLocalNetworkUsageDescription: "與同一網路上的 Mac 連線，測試合成申請案件與承辦工作台的狀態連動。"
         ITSAppUsesNonExemptEncryption: false
     scheme:
       testTargets:

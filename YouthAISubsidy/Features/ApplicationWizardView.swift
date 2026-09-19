@@ -6,7 +6,7 @@ struct ApplicationWizardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DemoBanner(text: model.isDemoMode ? "資料僅存這支手機・尚未送市府" : "團隊測試收件服務・非市府正式申辦")
+            DemoBanner(text: AppEnvironment.shortConnectionLabel)
             if let banner = model.banner {
                 Text(banner)
                     .font(.footnote)
@@ -30,7 +30,7 @@ struct ApplicationWizardView: View {
                 }
             }
         }
-        .background(AppTheme.background)
+        .appScreenBackground()
         .navigationTitle(model.step.title)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {

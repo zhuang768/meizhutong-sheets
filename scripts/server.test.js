@@ -7,6 +7,7 @@ const vm = require('node:vm');
 class Sheet {
   constructor(name, rows = []) { this.name = name; this.rows = rows; }
   getName() { return this.name; }
+  getParent() { return book; }
   getLastRow() { return this.rows.length; }
   getMaxRows() { return 100; }
   appendRow(row) { this.rows.push(row); }
@@ -19,6 +20,7 @@ class Sheet {
       getRow: () => row,
       getColumn: () => column,
       getNumRows: () => rowCount,
+      getNumColumns: () => columnCount,
       getValue: () => this.rows[row - 1]?.[column - 1],
       getValues: () => Array.from({ length: rowCount }, (_, r) =>
         Array.from({ length: columnCount }, (_, c) => this.rows[row - 1 + r]?.[column - 1 + c] ?? '')),
@@ -33,10 +35,22 @@ const properties = new Map([
   ['CLIENT_KEY', 'test-only-key'], ['SPREADSHEET_ID', 'test-only-sheet'],
   ['ATTACHMENT_FOLDER_ID', 'test-only-folder'], ['TOKEN_SECRET', 'test-only-secret']
 ]);
-const caseSheet = new Sheet('申請案件');
+const caseSheet = new Sheet('_原始資料_69欄');
+const summarySheet = new Sheet('申請案件', [[
+  '案件編號', '送出時間', '申請人姓名', 'AI 工具名稱', '換算新臺幣', '審查狀態', '承辦公開說明'
+]]);
+const applicantSheet = new Sheet('申請資料');
+const attachmentsSheet = new Sheet('附件');
+const aiSheet = new Sheet('AI 查核');
+const reviewSheet = new Sheet('人工審查');
 const tokenSheet = new Sheet('案件憑證', [['送件識別碼', '案件編號', '查詢憑證雜湊']]);
 const book = {
-  getSheetByName: name => ({ '申請案件': caseSheet, '案件憑證': tokenSheet })[name],
+  getSheetByName: name => ({
+    '_原始資料_69欄': caseSheet, '申請案件': summarySheet,
+    '申請資料': applicantSheet, '附件': attachmentsSheet,
+    'AI 查核': aiSheet, '人工審查': reviewSheet,
+    '案件憑證': tokenSheet
+  })[name],
   getId: () => 'test-only-sheet'
 };
 const context = vm.createContext({
@@ -60,10 +74,15 @@ const context = vm.createContext({
 });
 const scripts = ['Schema.gs', 'Server.gs'].map(name =>
   fs.readFileSync(path.join(__dirname, '..', 'sheets', name), 'utf8')).join('\n');
-vm.runInContext(scripts + '\nthis.api = { CASE_HEADERS, doPost, onEdit, assertCaseHeaders };', context);
-const { CASE_HEADERS, doPost, onEdit, assertCaseHeaders } = context.api;
+vm.runInContext(scripts + '\nthis.api = { CASE_HEADERS, doPost, onEdit, assertCaseHeaders, assertDisplaySheets };', context);
+const { CASE_HEADERS, doPost, onEdit, assertCaseHeaders, assertDisplaySheets } = context.api;
 caseSheet.rows.push([...CASE_HEADERS]);
+applicantSheet.rows.push(['案件編號', ...CASE_HEADERS.slice(4, 49)]);
+attachmentsSheet.rows.push(['案件編號', ...CASE_HEADERS.slice(49, 61)]);
+aiSheet.rows.push(['案件編號', ...CASE_HEADERS.slice(61, 65)]);
+reviewSheet.rows.push(['案件編號', ...CASE_HEADERS.slice(65, 68)]);
 assertCaseHeaders(caseSheet);
+assertDisplaySheets(book);
 
 const application = {
   action: 'submit', clientKey: 'test-only-key', clientSubmissionId: 'TEST-SUBMISSION-1',
@@ -81,24 +100,39 @@ assert.equal(received.case.status, 'submitted');
 assert.equal(caseSheet.rows.length, 2);
 assert.equal(caseSheet.rows[1][CASE_HEADERS.indexOf('申請人姓名')], '測試申請人');
 assert.equal(caseSheet.rows[1][CASE_HEADERS.indexOf('換算新臺幣')], 650);
+assert.equal(summarySheet.rows[1][2], '測試申請人');
+assert.equal(summarySheet.rows[1][4], 650);
+assert.equal(applicantSheet.rows[1][1], '測試申請人');
+assert.equal(attachmentsSheet.rows[1][0], received.case.caseId);
+assert.equal(aiSheet.rows[1][1], '尚未查核');
+assert.equal(reviewSheet.rows[1][1], '待審');
 
 const retry = post(application);
 assert.equal(retry.case.caseId, received.case.caseId);
 assert.equal(retry.accessToken, received.accessToken);
 assert.equal(caseSheet.rows.length, 2);
+assert.equal(summarySheet.rows.length, 2);
 
-const decisionColumn = CASE_HEADERS.indexOf('人工審查決定') + 1;
-caseSheet.rows[1][decisionColumn - 1] = '核准';
-onEdit({ range: caseSheet.getRange(2, decisionColumn) });
+reviewSheet.rows[1][1] = '核准';
+onEdit({ range: reviewSheet.getRange(2, 2) });
 assert.equal(caseSheet.rows[1][CASE_HEADERS.indexOf('審查狀態')], '已核准');
+assert.equal(summarySheet.rows[1][5], '已核准');
+assert.equal(caseSheet.rows[1][CASE_HEADERS.indexOf('人工審查決定')], '核准');
 const status = post({ action: 'status', clientKey: 'test-only-key',
   caseId: received.case.caseId, accessToken: received.accessToken });
 assert.equal(status.ok, true);
 assert.equal(status.status, 'approved');
+reviewSheet.rows[1][1] = '需補件';
+onEdit({ range: reviewSheet.getRange(2, 2) });
+assert.equal(summarySheet.rows[1][5], '需補件');
+assert.equal(post({ action: 'status', clientKey: 'test-only-key',
+  caseId: received.case.caseId, accessToken: received.accessToken }).status, 'needs_documents');
 assert.equal(post({ action: 'status', clientKey: 'test-only-key',
   caseId: received.case.caseId, accessToken: 'wrong' }).ok, false);
 assert.equal(post({ ...application, clientKey: 'wrong' }).ok, false);
 
 caseSheet.rows[0][4] = '錯誤標題';
 assert.throws(() => assertCaseHeaders(caseSheet));
+applicantSheet.rows[0][1] = '錯誤標題';
+assert.throws(() => assertDisplaySheets(book));
 console.log('收件、重試、人工決定與狀態查詢測試通過');

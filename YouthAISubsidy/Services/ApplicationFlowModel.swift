@@ -19,6 +19,7 @@ final class ApplicationFlowModel {
     var banner: String?
     var lastSubmittedId: String?
     var isEditingFromSummary = false
+    private let repository: any CaseRepository
 
     func editFromSummary(_ target: WizardStep) {
         guard lastSubmittedId == nil, !isBusy, !isImportingAttachment else { return }
@@ -34,8 +35,9 @@ final class ApplicationFlowModel {
         issues = FormValidator.issues(for: draft)
     }
 
-    init(draft: SubsidyCase = .blank()) {
+    init(draft: SubsidyCase = .blank(), repository: any CaseRepository = CaseRepositoryFactory.make()) {
         self.draft = draft
+        self.repository = repository
     }
 
     var estimate: SubsidyEstimate {
@@ -54,7 +56,7 @@ final class ApplicationFlowModel {
         isBusy = true
         defer { isBusy = false }
         do {
-            cases = try await CaseRepositoryFactory.make().listCases()
+            cases = try await repository.listCases()
         } catch {
             banner = error.localizedDescription
         }
@@ -158,7 +160,7 @@ final class ApplicationFlowModel {
         isBusy = true
         defer { isBusy = false }
         do {
-            draft = try await CaseRepositoryFactory.make().saveDraft(draft)
+            draft = try await repository.saveDraft(draft)
             banner = "已儲存草稿與附件在這支手機，尚未送出。"
             await refreshCases()
         } catch {
@@ -173,13 +175,13 @@ final class ApplicationFlowModel {
         isBusy = true
         defer { isBusy = false }
         do {
-            let result = try await CaseRepositoryFactory.make().submit(draft)
+            let result = try await repository.submit(draft)
             if result.status.isTerminalDecision {
                 banner = "後端回傳了人工審查結果。App 沒有自行核准或駁回。"
-            } else if isDemoMode {
+            } else if repository is DemoCaseStore {
                 banner = "已在這支手機記錄申請；尚未送交市府，附件仍僅存手機。"
             } else {
-                banner = "團隊後端已收妥這筆申請與附件；不是市府正式收件。"
+                banner = "試算表收件服務已收妥這筆申請與附件；不是市府正式收件。"
             }
             draft = result
             lastSubmittedId = result.caseId

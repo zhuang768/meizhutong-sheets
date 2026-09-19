@@ -1,6 +1,6 @@
 # 梅竹通｜試算表承辦方案
 
-這是與團隊「承辦 Web 工作台」並行的獨立方案。此儲存庫只保留青年端 iOS App、測試與試算表方案文件；不包含隊友的後端或承辦網站，也不會修改原儲存庫。
+此儲存庫維護青年端 iOS App，以及 Google 試算表收件與 AI 輔助查核。承辦人直接在試算表審查，不另做 Web 工作台。
 
 ## 預期流程
 
@@ -13,25 +13,24 @@
 
 ## 目前狀態
 
-這是從現有青年端 App 擷取出的獨立起點。**試算表尚未串接，也尚未驗證實體手機送件**。目前程式裡的其他收件客戶端是承接既有 App 的程式，不能視為試算表功能已完成；後續會在此儲存庫替換與驗證。不得對外宣稱可正式受理市府申請。
+**真機可一次送出合成申請並寫入試算表**；同一案件重送不會新增第二筆。人工審查分頁的決定可由 App「我的案件」下拉讀回。不得對外宣稱可正式受理市府申請。
 
-已選定 Google 試算表。使用者指定的「梅竹通」試算表中，「申請案件」工作表第一列已建立 69 個欄位並凍結。欄位順序由 `sheets/Schema.gs` 定義，`scripts/schema.test.js` 測試 App 申請資料應落在哪些欄位。這只是欄位與對應程式的準備；**尚未部署 Apps Script、未啟用 App 自動送件，也未完成 AI 查核或手機通知**。金鑰與登入憑證不能寫進 App、Git 或聊天內容。
+已選定 Google 試算表。可見分頁為「申請案件」、「申請資料」、「附件」、「AI 查核」、「人工審查」；原本 69 欄保留在隱藏的 `_原始資料_69欄` 工作表。收件程式先寫入原始資料，再按案件編號寫入五個分頁。Web App 已部署，無憑證請求會被拒絕。**AI 查核與手機推播尚未實作。** 金鑰與登入憑證不能提交到 Git。
 
 執行欄位對應測試：`node scripts/schema.test.js`。
 
-## 試算表收件程式（尚未部署）
+## 試算表收件程式
 
-`sheets/Schema.gs` 與 `sheets/Server.gs` 是要放進這份 Google 試算表的繫結 Apps Script 專案的程式。部署前可執行 `node scripts/schema.test.js` 與 `node scripts/server.test.js` 做不連網的合成資料測試。程式能對應 69 欄、建立案件、將支援的附件放到雲端硬碟、避免同一筆重送變成兩案、讀取人工審查狀態；測試通過不代表 Google 權限、網路與手機實拍已驗收。
+`sheets/FiveTabLayout.gs` 定義五分頁版面，`sheets/Schema.gs` 與 `sheets/Server.gs` 是收件與查詢程式。可執行 `node scripts/schema.test.js` 與 `node scripts/server.test.js` 做不連網的合成資料測試。
 
-啟用步驟（待實際完成與驗證）：
+本機設定：
 
-1. 由試算表的擁有者開啟「擴充功能 → Apps Script」，加入這兩份程式並執行 `setupService()`。Google 會要求擁有者確認試算表及雲端硬碟的授權。此步會建立隱藏的案件憑證工作表、附件資料夾與人工決定下拉選單，不會呼叫付費 AI。
-2. 在指令碼屬性自行設定 `CLIENT_KEY`。金鑰不要貼到聊天、提交到 Git，也不要使用真實身分證或存摺測試目前尚未驗收的公開收件服務。
-3. 確認部署對象和可存取範圍後才部署 Web App，再把固定 HTTPS 網址與測試專用的 `CLIENT_KEY` 以建置設定提供給 iOS App。App 不提供使用者手填網址或第二次同步按鈕。
-4. 用一筆合成申請在實體手機按「送出申請」，逐欄核對 Google 試算表、附件連結與回傳案件編號；人工改「人工審查決定」後，再在手機核對狀態。
+1. 由試算表擁有者在 Apps Script「專案設定 → 指令碼屬性」自行設定測試專用 `CLIENT_KEY`。金鑰不要貼到聊天或提交到 Git。
+2. 複製 `Config/Secrets.xcconfig.example` 為 `Config/Secrets.xcconfig`（已列入 `.gitignore`），填入同一把測試金鑰後執行 `make generate`。不要把金鑰寫進 `project.yml` 或 Xcode 專案檔。固定 HTTPS 收件網址已在 App 專案中設定。App 不提供使用者手填網址或第二次同步按鈕。
+3. 用一筆合成申請在實體手機按「送出申請」，核對試算表與附件連結；人工改「人工審查」分頁後，再在手機「我的案件」下拉更新。
 
-Apps Script 方案目前限制單檔 10 MB、單次送件附件總量 25 MB，支援 JPEG、PNG、PDF。AI 查核與推播通知尚未實作。試算表和 Drive 授權會讓程式以擁有者身分寫入資料；內含在手機程式中的測試金鑰可被逆向取得，不能當作正式受理真實證件的登入機制。Apps Script 與 Drive 配額也可能限制送件量；使用量或付費模型成本應在啟用 AI 前評估。
+Apps Script 方案目前限制單檔 10 MB、單次送件附件總量 25 MB，支援 JPEG、PNG、PDF。試算表和 Drive 授權會讓程式以擁有者身分寫入資料；內含在手機程式中的測試金鑰可被逆向取得，不能當作正式受理真實證件的登入機制。
 
 ## 本機建置
 
-需 macOS、Xcode 與 XcodeGen。執行 `xcodegen generate` 後開啟產生的 Xcode 專案。測試可用 `make test`；建置可用 `make build`。如電腦上 Xcode 路徑或模擬器版本不同，覆寫 Makefile 的 `DEVELOPER_DIR` 與 `DESTINATION`。
+需 macOS、Xcode 與 XcodeGen。若尚未有本機憑證檔，`make generate` 會從範本建立空白的 `Config/Secrets.xcconfig`。憑證填好後再開啟產生的 Xcode 專案。測試可用 `make test`；建置可用 `make build`。不要把 `Config/Secrets.xcconfig` 加入 Git。

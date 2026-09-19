@@ -1,35 +1,48 @@
 // 貼到「梅竹通」試算表的繫結 Apps Script 專案；須與 Schema.gs 一起使用。
-// 尚未部署前，這份程式不會接收手機送件。
-const CASE_SHEET_NAME = '申請案件';
+// 部署後仍須設定 CLIENT_KEY；無憑證或憑證錯誤的請求會被拒絕。
+const CASE_SHEET_NAME = '_原始資料_69欄';
 const TOKEN_SHEET_NAME = '案件憑證';
+const DISPLAY_SHEETS = ['申請案件', '申請資料', '附件', 'AI 查核', '人工審查'];
 const DECISIONS = ['待審', '需補件', '核准', '駁回'];
 const DOCUMENT_BYTES_MAX = 10 * 1024 * 1024;
 const TOTAL_DOCUMENT_BYTES_MAX = 25 * 1024 * 1024;
 
 function setupService() {
-  const book = SpreadsheetApp.getActiveSpreadsheet();
+  const properties = PropertiesService.getScriptProperties();
+  const book = SpreadsheetApp.getActiveSpreadsheet() ||
+    (properties.getProperty('SPREADSHEET_ID') ? SpreadsheetApp.openById(properties.getProperty('SPREADSHEET_ID')) : null);
   if (!book) throw new Error('請從梅竹通試算表開啟 Apps Script 後執行');
   const cases = book.getSheetByName(CASE_SHEET_NAME);
-  if (!cases) throw new Error('找不到申請案件工作表');
+  if (!cases) throw new Error('找不到原始資料工作表（_原始資料_69欄）');
   assertCaseHeaders(cases);
+  assertDisplaySheets(book);
   const tokenSheet = book.getSheetByName(TOKEN_SHEET_NAME) || book.insertSheet(TOKEN_SHEET_NAME);
   if (tokenSheet.getLastRow() === 0) {
     tokenSheet.appendRow(['送件識別碼', '案件編號', '查詢憑證雜湊']);
   }
   tokenSheet.hideSheet();
-  const decisionIndex = CASE_HEADERS.indexOf('人工審查決定') + 1;
   const rule = SpreadsheetApp.newDataValidation().requireValueInList(DECISIONS, true).setAllowInvalid(false).build();
-  cases.getRange(2, decisionIndex, Math.max(cases.getMaxRows() - 1, 1), 1).setDataValidation(rule);
-  const properties = PropertiesService.getScriptProperties();
+  const review = book.getSheetByName('人工審查');
+  review.getRange(2, 2, Math.max(review.getMaxRows() - 1, 1), 1).setDataValidation(rule);
   properties.setProperty('SPREADSHEET_ID', book.getId());
   if (!properties.getProperty('TOKEN_SECRET')) {
     properties.setProperty('TOKEN_SECRET', Utilities.getUuid() + Utilities.getUuid());
   }
   if (!properties.getProperty('ATTACHMENT_FOLDER_ID')) {
-    properties.setProperty('ATTACHMENT_FOLDER_ID', DriveApp.createFolder('梅竹通申請附件').getId());
+    const existing = DriveApp.getFoldersByName('梅竹通申請附件');
+    properties.setProperty(
+      'ATTACHMENT_FOLDER_ID',
+      existing.hasNext() ? existing.next().getId() : DriveApp.createFolder('梅竹通申請附件').getId()
+    );
   }
-  // CLIENT_KEY 必須由擁有者在「專案設定 > 指令碼屬性」自行填入。
-  return '欄位、人工審查選單與附件資料夾已備妥；尚未部署收件網址。';
+  return '欄位、人工審查選單與附件資料夾已備妥；CLIENT_KEY 仍須另行設定。';
+}
+
+function applyClientKeyOnce(key) {
+  const trimmed = String(key || '').trim();
+  if (!trimmed) throw new Error('CLIENT_KEY 空白');
+  PropertiesService.getScriptProperties().setProperty('CLIENT_KEY', trimmed);
+  return 'CLIENT_KEY 已設定';
 }
 
 function doPost(e) {
@@ -56,6 +69,7 @@ function submitApplication(body) {
     const cases = book.getSheetByName(CASE_SHEET_NAME);
     const tokens = book.getSheetByName(TOKEN_SHEET_NAME);
     assertCaseHeaders(cases);
+    assertDisplaySheets(book);
     const previous = findTokenRow(tokens, body.clientSubmissionId);
     if (previous) {
       // 同一次送件重試回傳同一筆案件，避免斷線後新增重複案件。
@@ -76,11 +90,23 @@ function submitApplication(body) {
         documentLinks: links,
         accessCode: caseId.slice(-6)
       });
-      tokens.appendRow([sheetText(body.clientSubmissionId), caseId, tokenHash(accessToken)]);
+      const appended = [];
       try {
         cases.appendRow(row);
+        appended.push(cases);
+        const displayRows = displayRowsFor(row);
+        DISPLAY_SHEETS.forEach((name, index) => {
+          const sheet = book.getSheetByName(name);
+          sheet.appendRow(displayRows[index]);
+          appended.push(sheet);
+        });
+        tokens.appendRow([sheetText(body.clientSubmissionId), caseId, tokenHash(accessToken)]);
       } catch (error) {
-        tokens.deleteRow(tokens.getLastRow());
+        // 只回復本次新增的列；不碰既有案件。
+        appended.reverse().forEach(sheet => {
+          const last = sheet.getLastRow();
+          if (last > 1 && sheet.getRange(last, 1).getValue() === caseId) sheet.deleteRow(last);
+        });
         throw error;
       }
       return { ok: true, case: { caseId: caseId, status: 'submitted' }, accessToken: accessToken };
@@ -140,16 +166,60 @@ function readApplicationStatus(body) {
 }
 
 function onEdit(e) {
-  if (!e || !e.range || e.range.getSheet().getName() !== CASE_SHEET_NAME || e.range.getRow() < 2) return;
-  const sheet = e.range.getSheet();
-  const decisionColumn = CASE_HEADERS.indexOf('人工審查決定') + 1;
-  if (e.range.getColumn() !== decisionColumn || e.range.getNumRows() !== 1) return;
+  if (!e || !e.range || e.range.getSheet().getName() !== '人工審查' ||
+      e.range.getRow() < 2 || e.range.getColumn() !== 2 ||
+      e.range.getNumRows() !== 1 || e.range.getNumColumns() !== 1) return;
+  const review = e.range.getSheet();
+  const caseId = review.getRange(e.range.getRow(), 1).getValue();
   const decision = e.range.getValue();
   if (!DECISIONS.includes(decision)) return;
+  const book = review.getParent();
+  const sheet = book.getSheetByName(CASE_SHEET_NAME);
+  const summary = book.getSheetByName('申請案件');
+  const rawRow = findCaseRow(sheet, caseId);
+  const summaryRow = findCaseRow(summary, caseId);
+  if (!caseId || !rawRow || !summaryRow) throw new Error('找不到對應案件，未更新審查狀態');
   const status = { '待審': '待審', '需補件': '需補件', '核准': '已核准', '駁回': '已駁回' }[decision];
-  sheet.getRange(e.range.getRow(), CASE_HEADERS.indexOf('審查狀態') + 1).setValue(status);
-  sheet.getRange(e.range.getRow(), CASE_HEADERS.indexOf('決定時間') + 1)
-    .setValue(decision === '待審' ? '' : new Date());
+  const when = decision === '待審' ? '' : new Date();
+  sheet.getRange(rawRow, 66).setValue(decision);
+  sheet.getRange(rawRow, 3).setValue(status);
+  sheet.getRange(rawRow, 68).setValue(when);
+  summary.getRange(summaryRow, 6).setValue(status);
+  review.getRange(e.range.getRow(), 4).setValue(when);
+}
+
+function findCaseRow(sheet, caseId) {
+  if (!sheet || sheet.getLastRow() < 2 || !caseId) return null;
+  const index = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues()
+    .findIndex(row => row[0] === caseId);
+  return index < 0 ? null : index + 2;
+}
+
+function displayRowsFor(row) {
+  return [
+    [row[0], row[1], row[4], row[26], row[35], row[2], row[3]],
+    [row[0]].concat(row.slice(4, 49)),
+    [row[0]].concat(row.slice(49, 61)),
+    [row[0]].concat(row.slice(61, 65)),
+    [row[0]].concat(row.slice(65, 68))
+  ];
+}
+
+function assertDisplaySheets(book) {
+  const expected = [
+    ['案件編號', '送出時間', '申請人姓名', 'AI 工具名稱', '換算新臺幣', '審查狀態', '承辦公開說明'],
+    ['案件編號'].concat(CASE_HEADERS.slice(4, 49)),
+    ['案件編號'].concat(CASE_HEADERS.slice(49, 61)),
+    ['案件編號'].concat(CASE_HEADERS.slice(61, 65)),
+    ['案件編號'].concat(CASE_HEADERS.slice(65, 68))
+  ];
+  DISPLAY_SHEETS.forEach((name, index) => {
+    const sheet = book.getSheetByName(name);
+    if (!sheet || expected[index].some((value, column) =>
+      sheet.getRange(1, column + 1).getValue() !== value)) {
+      throw new Error(name + ' 欄位不一致，已停止寫入');
+    }
+  });
 }
 
 function assertCaseHeaders(sheet) {

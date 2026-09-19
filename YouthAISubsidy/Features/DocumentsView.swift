@@ -247,7 +247,7 @@ struct DocumentsView: View {
         HStack {
             Text(title)
             Spacer()
-            Text(value ?? "未辨識").foregroundStyle(value == nil ? AppTheme.warning : .primary)
+            Text(value ?? "未辨識").foregroundStyle(value == nil ? AppTheme.warning : AppTheme.ink)
         }
     }
 }
@@ -290,6 +290,7 @@ struct LocalDocumentPreview: View {
                 Spacer()
             }
             .padding(16)
+            .background(AppTheme.background)
             .navigationTitle(document.type.zhTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

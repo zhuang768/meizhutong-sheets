@@ -35,7 +35,7 @@ struct HomeView: View {
             }
             .padding(16)
         }
-        .background(AppTheme.background)
+        .appScreenBackground()
         .navigationTitle("梅竹通")
     }
 }

@@ -6,13 +6,6 @@
 	<string>$(API_BASE_URL)</string>
 	<key>APIClientKey</key>
 	<string>$(API_CLIENT_KEY)</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>與同一網路上的 Mac 連線，測試合成申請案件與承辦工作台的狀態連動。</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>

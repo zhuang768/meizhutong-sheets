@@ -5,6 +5,8 @@ SCHEME ?= YouthAISubsidy
 .PHONY: generate build test uitest format-check simulator-boot
 
 generate:
+	@mkdir -p Config
+	@test -f Config/Secrets.xcconfig || cp Config/Secrets.xcconfig.example Config/Secrets.xcconfig
 	xcodegen generate
 
 build: generate

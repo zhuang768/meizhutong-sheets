@@ -9,7 +9,7 @@ struct DemoBanner: View {
             .foregroundStyle(AppTheme.ink)
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(red: 226 / 255, green: 232 / 255, blue: 240 / 255))
+            .background(AppTheme.subtleFill)
             .accessibilityIdentifier("demo.banner")
             .accessibilityAddTraits(.isStaticText)
     }
@@ -55,7 +55,7 @@ struct ErrorSummary: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(red: 254 / 255, green: 226 / 255, blue: 226 / 255))
+            .background(AppTheme.dangerFill)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("form.errorSummary")
@@ -75,7 +75,7 @@ struct EstimateCard: View {
                 .font(.subheadline.weight(.bold))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color(red: 226 / 255, green: 232 / 255, blue: 240 / 255))
+                .background(AppTheme.subtleFill)
                 .clipShape(Capsule())
                 .accessibilityIdentifier("estimate.unofficial")
             ForEach(estimate.hints, id: \.self) { hint in
@@ -143,7 +143,7 @@ struct WizardFooter: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(stepColor)
+            .tint(AppTheme.wizardAccent(for: step))
             .animation(.easeInOut(duration: 0.3), value: step)
             .disabled(isBusy)
             .accessibilityIdentifier("wizard.primary")
@@ -151,16 +151,6 @@ struct WizardFooter: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial)
-    }
-
-    private var stepColor: Color {
-        switch step {
-        case .applicant: return Color(red: 73 / 255, green: 101 / 255, blue: 188 / 255)
-        case .purchase: return Color(red: 63 / 255, green: 89 / 255, blue: 173 / 255)
-        case .documents: return Color(red: 52 / 255, green: 78 / 255, blue: 161 / 255)
-        case .awareness: return Color(red: 40 / 255, green: 67 / 255, blue: 148 / 255)
-        case .review: return AppTheme.primary
-        }
     }
 }
 

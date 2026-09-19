@@ -34,20 +34,6 @@ final class ApplicationFlowModelTests: XCTestCase {
         XCTAssertEqual(YouthPresentation.attachmentStatusText(for: document), "本機照片（僅存本機、尚未上傳）")
     }
 
-    func testSyntheticLinkPayloadUsesFilledAppFieldsWithoutPhotoOrIDNumber() throws {
-        let model = ApplicationFlowModel()
-        model.fillTestApplication()
-        let data = try SyntheticLinkClient.payload(for: model.draft)
-        let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        let applicant = try XCTUnwrap(payload["applicant"] as? [String: Any])
-        let purchase = try XCTUnwrap(payload["purchase"] as? [String: Any])
-        XCTAssertEqual(applicant["fullName"] as? String, model.draft.applicant.fullName)
-        XCTAssertEqual(purchase["toolName"] as? String, model.draft.purchase.toolName)
-        XCTAssertEqual((purchase["charges"] as? [[String: Any]])?.first?["twdAmount"] as? String, "640")
-        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("TEST-ID-ONLY"))
-        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("localRelativePath"))
-    }
-
     func testMobileSubmissionPayloadContainsEnteredFieldsAndActualAttachmentBytes() throws {
         let model = ApplicationFlowModel()
         model.fillTestApplication()
@@ -128,7 +114,7 @@ final class ApplicationFlowModelTests: XCTestCase {
     }
 
     func testSubmitReplacesDraftAndCannotBeSavedOrSubmittedAgain() async throws {
-        let model = ApplicationFlowModel()
+        let model = ApplicationFlowModel(repository: DemoCaseStore.shared)
         model.loadTemplate(SyntheticFixtures.generalId, attachingSyntheticDocuments: true)
         await model.saveDraft()
         XCTAssertEqual(model.ownCases.count, 1)

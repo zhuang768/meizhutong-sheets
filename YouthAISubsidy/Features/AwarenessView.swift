@@ -15,7 +15,7 @@ struct AwarenessView: View {
             }
             .padding(16)
         }
-        .background(AppTheme.background)
+        .appScreenBackground()
     }
 
     private func awarenessCard(_ card: AwarenessMaterial.Card, index: Int) -> some View {
@@ -40,7 +40,7 @@ struct AwarenessView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(red: 241 / 255, green: 245 / 255, blue: 249 / 255))
+                .background(AppTheme.placeholderFill)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             Text(card.title)

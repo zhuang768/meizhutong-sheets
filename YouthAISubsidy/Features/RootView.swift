@@ -45,6 +45,12 @@ struct RootView: View {
     }
 }
 
-#Preview {
+#Preview("淺色") {
     RootView()
+        .preferredColorScheme(.light)
+}
+
+#Preview("深色") {
+    RootView()
+        .preferredColorScheme(.dark)
 }

@@ -10,31 +10,25 @@ struct AboutView: View {
             Section("這支 App 會做什麼") {
                 Text("協助青年逐步填寫官方要求資料、附上適用文件、閱讀兩則 AI 資安宣導，並查看自己送出後的進度。補件內容只在承辦正式通知時顯示。")
                     .font(.footnote)
-                Text("不會顯示承辦工作台、其他人的案件、內部 AI 預審或管理員設定。")
+                Text("不會顯示其他人的案件、內部 AI 預審或管理員設定。審查決定只由承辦人在試算表人工完成。")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.muted)
             }
             Section("資料與附件") {
-                Text("資料與附件只存在這支 iPhone；目前未連接市府申辦系統，這不是正式案件。")
+                Text("這不是正式案件。\(AppEnvironment.connectionLabel)")
                     .font(.footnote)
                     .accessibilityIdentifier("about.localOnly")
-                Text("相簿選到的影像只存在本機，畫面會標「僅存本機、尚未上傳」。在附件上傳契約確認前，App 不會把證件、存摺、付款資料或照片送到外部。")
+                Text("相簿選到的影像先存在本機，畫面會標「僅存本機、尚未上傳」。只有按「送出申請」且收件服務回覆成功後，附件才會傳到試算表收件服務。")
                     .font(.footnote)
             }
             Section("金鑰與 API") {
-                Text("個人的 GPT 或其他模型 API key 不是政府申辦金鑰。禁止把它寫進 iOS App、程式碼、測試資料、日誌或 Git。未來 AI 只能由隊友後端保管金鑰並提供受控 API。")
+                Text("個人的 GPT 或其他模型 API key 不是政府申辦金鑰。禁止把它寫進 Git 或聊天。內嵌測試憑證可被擷取，不能當正式身分驗證。")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.warning)
                     .accessibilityIdentifier("about.noApiKey")
-                Text("青年畫面不提供 API 網址或金鑰輸入。即使裝置留有舊網址，本版本也不會傳送申請資料。")
+                Text("青年畫面不提供 API 網址或金鑰輸入。只有建置時寫入的收件服務可送件；缺憑證時會明確失敗，不會假裝已送出。")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.muted)
-            }
-            Section("仍待隊友 API 契約") {
-                Text("待對齊：案件建立／查詢／補件、欄位大小寫與日期金額格式、附件上傳方式、驗證與錯誤格式、查詢授權。詳見 docs/API_CONTRACT_QUESTIONS.md。")
-                    .font(.footnote)
-                    .foregroundStyle(AppTheme.muted)
-                    .accessibilityIdentifier("about.contractPending")
             }
             Section("來源") {
                 Text("官方公開說明：dgservice.hccg.gov.tw 服務公告 id=1323")

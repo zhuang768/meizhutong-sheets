@@ -49,7 +49,6 @@ final class YouthAISubsidyUITests: XCTestCase {
         app.swipeUp()
         app.swipeUp()
         XCTAssertTrue(labeled(app, contains: "GPT").waitForExistence(timeout: 3))
-        XCTAssertTrue(labeled(app, contains: "待對齊").exists)
         XCTAssertFalse(app.textFields["settings.apiBaseURL"].exists)
         XCTAssertFalse(app.buttons["settings.save"].exists)
         XCTAssertFalse(app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'http'")).firstMatch.exists)
@@ -117,24 +116,20 @@ final class YouthAISubsidyUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["estimate.unofficial"].waitForExistence(timeout: 6))
         advance(app)
         XCTAssertTrue(
-            app.staticTexts["review.submittedId"].waitForExistence(timeout: 8)
-                || labeled(app, contains: "已記錄送出").waitForExistence(timeout: 3)
-                || labeled(app, contains: "案件編號").waitForExistence(timeout: 2)
-                || labeled(app, contains: "CASE-DEMO-LOCAL").waitForExistence(timeout: 2)
+            labeled(app, contains: "申請沒有送出").waitForExistence(timeout: 8)
                 || app.staticTexts["review.resultBanner"].waitForExistence(timeout: 2)
+                || app.staticTexts["wizard.feedback"].waitForExistence(timeout: 2)
         )
+        XCTAssertFalse(app.staticTexts["review.submittedId"].exists)
 
         app.tabBars.buttons["案件"].tap()
-        let submitted = app.staticTexts.containing(NSPredicate(format: "identifier BEGINSWITH 'cases.id.CASE-DEMO-LOCAL'")).firstMatch
-        XCTAssertTrue(submitted.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            app.staticTexts["cases.emptyOwn"].waitForExistence(timeout: 8)
+                || labeled(app, contains: "尚無自己的申請").waitForExistence(timeout: 2)
+        )
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "identifier BEGINSWITH 'cases.id.CASE-DEMO-LOCAL'")).firstMatch.exists)
         XCTAssertFalse(app.staticTexts["cases.id.CASE-DEMO-GENERAL-001"].exists)
-
-        submitted.tap()
-        XCTAssertTrue(element(app, "status.caseId").waitForExistence(timeout: 5) || labeled(app, contains: "CASE-DEMO-LOCAL").waitForExistence(timeout: 2))
-        XCTAssertTrue(labeled(app, contains: "目前沒有承辦發出的補件通知").waitForExistence(timeout: 3))
-        XCTAssertFalse(labeled(app, contains: "官方收據未見軟體公司名稱").exists)
         XCTAssertFalse(app.staticTexts["案件時間軸"].exists)
-        XCTAssertFalse(labeled(app, contains: "不是你的申請").exists)
     }
 
     @MainActor
@@ -143,7 +138,8 @@ final class YouthAISubsidyUITests: XCTestCase {
         app.buttons["home.startBlank"].tap()
         app.buttons["wizard.fillTest"].tap()
         for _ in 0..<5 { advance(app) }
-        XCTAssertTrue(app.staticTexts["review.submittedId"].waitForExistence(timeout: 8))
+        XCTAssertTrue(labeled(app, contains: "申請沒有送出").waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts["review.submittedId"].exists)
         XCTAssertFalse(app.buttons["review.syntheticLink.submit"].exists)
         XCTAssertFalse(app.buttons["review.syntheticLink.refresh"].exists)
         XCTAssertFalse(app.textFields["Mac 測試網址"].exists)
@@ -203,6 +199,7 @@ final class YouthAISubsidyUITests: XCTestCase {
         app.staticTexts["demo.banner"].waitForExistence(timeout: 8)
             || app.otherElements["demo.banner"].waitForExistence(timeout: 2)
             || labeled(app, contains: "尚未送市府").waitForExistence(timeout: 2)
+            || labeled(app, contains: "送出不會進表").waitForExistence(timeout: 2)
     }
 
     private func labeled(_ app: XCUIApplication, contains text: String) -> XCUIElement {

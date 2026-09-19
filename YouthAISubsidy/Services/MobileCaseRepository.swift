@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// 手機只保存自己的案件憑證；承辦工作台不得取得這些憑證。
+/// 手機只保存自己的案件憑證；查詢代碼不提供給其他人的裝置。
 enum MobileCaseTokenStore {
     private static let service = "com.meizhuhackathon.YouthAISubsidy.case-access"
 

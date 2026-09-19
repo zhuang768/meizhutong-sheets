@@ -3,11 +3,6 @@ import SwiftUI
 struct DemoSandboxView: View {
     @Environment(ApplicationFlowModel.self) private var model
     @State private var showResetConfirmation = false
-    @AppStorage("syntheticLinkBaseURL") private var linkBaseURL = "http://127.0.0.1:8791"
-    @State private var linked: SyntheticLinkClient.Link?
-    @State private var linkedStatus = ""
-    @State private var linkMessage = ""
-    @State private var linking = false
 
     var body: some View {
         List {
@@ -28,34 +23,6 @@ struct DemoSandboxView: View {
                     .accessibilityIdentifier("demo.loadSpecial")
                 templateButton("案例 3：父母代付／Claude 年費", id: SyntheticFixtures.proxyId)
                     .accessibilityIdentifier("demo.loadProxy")
-            }
-            Section("與承辦工作台連動測試") {
-                Text("只傳目前申請頁的合成欄位與合成附件種類，不傳影像、身分證字號或手機裡的真實案件。後端重新啟動後，這筆測試案件會消失。")
-                    .font(.footnote)
-                TextField("Mac 測試網址", text: $linkBaseURL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.URL)
-                    .accessibilityIdentifier("syntheticLink.baseURL")
-                Button("將目前合成申請送到承辦工作台") {
-                    Task { await sendSyntheticApplication() }
-                }
-                .disabled(linking)
-                .accessibilityIdentifier("syntheticLink.submit")
-                if let linked {
-                    Text("案件編號：\(linked.case.caseId)")
-                        .textSelection(.enabled)
-                    Text("後端狀態：\(linkedStatus)")
-                    Button("更新承辦處理狀態") {
-                        Task { await refreshLinkedStatus() }
-                    }
-                    .disabled(linking)
-                    .accessibilityIdentifier("syntheticLink.refresh")
-                }
-                if !linkMessage.isEmpty {
-                    Text(linkMessage).font(.footnote)
-                        .accessibilityIdentifier("syntheticLink.feedback")
-                }
             }
             Section("查看合成案件狀態（非正式）") {
                 ForEach(model.demoFixtures) { item in
@@ -101,32 +68,6 @@ struct DemoSandboxView: View {
     private func templateButton(_ title: String, id: String) -> some View {
         Button(title) {
             model.loadTemplate(id, attachingSyntheticDocuments: false)
-        }
-    }
-
-    private func sendSyntheticApplication() async {
-        linking = true
-        defer { linking = false }
-        do {
-            let result = try await SyntheticLinkClient.submit(model.draft, to: linkBaseURL)
-            linked = result
-            linkedStatus = result.case.status
-            linkMessage = "承辦工作台已可查詢這筆合成案件。"
-        } catch {
-            linkMessage = error.localizedDescription
-        }
-    }
-
-    private func refreshLinkedStatus() async {
-        guard let linked else { return }
-        linking = true
-        defer { linking = false }
-        do {
-            let result = try await SyntheticLinkClient.refresh(linked, at: linkBaseURL)
-            linkedStatus = result.status
-            linkMessage = result.statusNote ?? "已讀取後端最新狀態。"
-        } catch {
-            linkMessage = error.localizedDescription
         }
     }
 }

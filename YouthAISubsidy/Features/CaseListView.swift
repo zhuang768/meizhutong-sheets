@@ -99,7 +99,7 @@ struct CaseStatusView: View {
             }
             .padding(16)
         }
-        .background(AppTheme.background)
+        .appScreenBackground()
         .navigationTitle("案件狀態")
     }
 
