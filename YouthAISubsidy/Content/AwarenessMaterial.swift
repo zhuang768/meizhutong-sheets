@@ -22,8 +22,8 @@ enum AwarenessMaterial {
         Card(
             id: "awareness-2",
             assetName: "AwarenessCard2",
-            title: "AI 金鑰不是市府申辦鑰匙",
-            body: "個人的 GPT 或其他模型 API key 不是政府申辦金鑰，也不該寫進這支 App。未來若有輔助檢查，金鑰只會由隊友後端保管，青年端不會送出附件內容。",
+            title: "四個方法，讓 AI 回答更準確",
+            body: "寫提示詞時交代目的、成果、對象、格式與限制；讓 AI 先問你問題來補齊需求；依任務選擇合適的工具；最後請它比較不同觀點、找出盲點，再由你自己核實與判斷。",
             designerNote: "圖二：待設計師提供。替換 Assets.xcassets 的 AwarenessCard2，並改這段標題與內文即可。"
         )
     ]
