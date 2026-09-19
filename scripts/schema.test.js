@@ -23,11 +23,11 @@ const row = submissionToRow(submission, {
 assert.equal(row.length, 69);
 assert.equal(row[CASE_HEADERS.indexOf('申請人姓名')], '測試申請人');
 assert.equal(row[CASE_HEADERS.indexOf('AI 工具名稱')], '測試工具');
-assert.equal(row[CASE_HEADERS.indexOf('換算新臺幣')], '650');
+assert.equal(row[CASE_HEADERS.indexOf('換算新臺幣')], 650);
 assert.equal(row[CASE_HEADERS.indexOf('身分證正面連結')], 'https://example.invalid/test-only');
-assert.equal(row[CASE_HEADERS.indexOf('收據已註明購買人')], 'true');
-assert.equal(row[CASE_HEADERS.indexOf('收據有軟體名稱')], 'true');
-assert.equal(row[CASE_HEADERS.indexOf('收據有公司名稱')], 'false');
+assert.equal(row[CASE_HEADERS.indexOf('收據已註明購買人')], true);
+assert.equal(row[CASE_HEADERS.indexOf('收據有軟體名稱')], true);
+assert.equal(row[CASE_HEADERS.indexOf('收據有公司名稱')], false);
 assert.equal(row[CASE_HEADERS.indexOf('人工審查決定')], '待審');
 assert.equal(sheetText('=IMPORTXML("x", "y")'), "'=IMPORTXML(\"x\", \"y\")");
 console.log('試算表 69 欄與申請資料對應測試通過');

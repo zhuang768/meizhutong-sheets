@@ -30,7 +30,7 @@ enum AppEnvironment {
 
     static var connectionLabel: String {
         isRemoteAPIEnabled
-            ? "已連接團隊收件服務；不是市府正式申辦系統。"
+            ? "已連接試算表收件服務；不是市府正式申辦系統。"
             : "尚未連接市府申辦系統；資料只保存在這支手機，非正式案件。"
     }
 

@@ -10,7 +10,7 @@ struct ReviewSubmitView: View {
                     Text("手機內編號：\(YouthPresentation.displayCaseId(id))")
                         .font(.headline)
                         .accessibilityIdentifier("review.submittedId")
-                    Text(model.isDemoMode ? "已在這支手機記錄申請，尚未送交市府。" : "團隊後端已收妥申請與附件；非市府正式收件。")
+                    Text(model.isDemoMode ? "已在這支手機記錄申請，尚未送交市府。" : "試算表收件服務已收妥申請與附件；非市府正式收件。")
                         .font(.footnote)
                         .foregroundStyle(AppTheme.muted)
                 }

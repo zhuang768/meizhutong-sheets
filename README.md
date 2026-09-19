@@ -19,6 +19,19 @@
 
 執行欄位對應測試：`node scripts/schema.test.js`。
 
+## 試算表收件程式（尚未部署）
+
+`sheets/Schema.gs` 與 `sheets/Server.gs` 是要放進這份 Google 試算表的繫結 Apps Script 專案的程式。部署前可執行 `node scripts/schema.test.js` 與 `node scripts/server.test.js` 做不連網的合成資料測試。程式能對應 69 欄、建立案件、將支援的附件放到雲端硬碟、避免同一筆重送變成兩案、讀取人工審查狀態；測試通過不代表 Google 權限、網路與手機實拍已驗收。
+
+啟用步驟（待實際完成與驗證）：
+
+1. 由試算表的擁有者開啟「擴充功能 → Apps Script」，加入這兩份程式並執行 `setupService()`。Google 會要求擁有者確認試算表及雲端硬碟的授權。此步會建立隱藏的案件憑證工作表、附件資料夾與人工決定下拉選單，不會呼叫付費 AI。
+2. 在指令碼屬性自行設定 `CLIENT_KEY`。金鑰不要貼到聊天、提交到 Git，也不要使用真實身分證或存摺測試目前尚未驗收的公開收件服務。
+3. 確認部署對象和可存取範圍後才部署 Web App，再把固定 HTTPS 網址與測試專用的 `CLIENT_KEY` 以建置設定提供給 iOS App。App 不提供使用者手填網址或第二次同步按鈕。
+4. 用一筆合成申請在實體手機按「送出申請」，逐欄核對 Google 試算表、附件連結與回傳案件編號；人工改「人工審查決定」後，再在手機核對狀態。
+
+Apps Script 方案目前限制單檔 10 MB、單次送件附件總量 25 MB，支援 JPEG、PNG、PDF。AI 查核與推播通知尚未實作。試算表和 Drive 授權會讓程式以擁有者身分寫入資料；內含在手機程式中的測試金鑰可被逆向取得，不能當作正式受理真實證件的登入機制。Apps Script 與 Drive 配額也可能限制送件量；使用量或付費模型成本應在啟用 AI 前評估。
+
 ## 本機建置
 
 需 macOS、Xcode 與 XcodeGen。執行 `xcodegen generate` 後開啟產生的 Xcode 專案。測試可用 `make test`；建置可用 `make build`。如電腦上 Xcode 路徑或模擬器版本不同，覆寫 Makefile 的 `DEVELOPER_DIR` 與 `DESTINATION`。

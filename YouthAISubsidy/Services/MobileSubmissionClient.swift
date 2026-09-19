@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-/// 單次送件的網路契約。只使用設定於 App 建置中的 HTTPS API，不接受畫面手填網址。
+/// 試算表方案的單次送件契約。只使用建置時設定的 HTTPS 網址。
 enum MobileSubmissionClient {
     struct Receipt: Decodable {
         struct CaseInfo: Decodable {
@@ -16,6 +16,21 @@ enum MobileSubmissionClient {
         let caseId: String
         let status: CaseStatus
         let statusNote: String?
+    }
+
+    private struct SubmissionEnvelope: Decodable {
+        let ok: Bool
+        let `case`: Receipt.CaseInfo?
+        let accessToken: String?
+        let error: String?
+    }
+
+    private struct StatusEnvelope: Decodable {
+        let ok: Bool
+        let caseId: String?
+        let status: CaseStatus?
+        let statusNote: String?
+        let error: String?
     }
 
     private static func day(_ date: Date) -> String {
@@ -58,6 +73,7 @@ enum MobileSubmissionClient {
             "monthlyPeriods": form.monthlyPeriods,
             "receiptConfirmations": Array(form.receiptConfirmations).sorted(),
         ]
+        var totalBytes = 0
         let documents: [[String: Any]] = try item.documents.map { document in
             let url = LocalAttachmentStore.fileURL(for: document)
             let original = try Data(contentsOf: url)
@@ -74,37 +90,73 @@ enum MobileSubmissionClient {
                 bytes = jpeg
                 contentType = "image/jpeg"
             }
+            totalBytes += bytes.count
+            guard totalBytes <= 25 * 1024 * 1024 else {
+                throw CaseRepositoryError.remoteFailed("附件總量超過單次送件 25 MB，請縮小圖片後重試。")
+            }
             return ["type": document.type.rawValue, "contentType": contentType, "base64": bytes.base64EncodedString()]
         }
         return try JSONSerialization.data(withJSONObject: [
+            "clientSubmissionId": item.caseId,
             "applicant": applicant, "purchase": purchase, "form": fields, "documents": documents,
         ])
     }
 
-    static func submit(_ item: SubsidyCase, baseURL: URL, session: URLSession = .shared) async throws -> Receipt {
+    static func submit(
+        _ item: SubsidyCase,
+        baseURL: URL,
+        clientKey: String? = AppEnvironment.configuredClientKey,
+        session: URLSession = .shared
+    ) async throws -> Receipt {
         guard baseURL.scheme == "https", baseURL.host != nil,
-              let key = AppEnvironment.configuredClientKey else {
+              let key = clientKey, !key.isEmpty else {
             throw CaseRepositoryError.remoteFailed("尚未設定可用的 HTTPS 收件服務。")
         }
-        var request = URLRequest(url: baseURL.appending(path: "v1/mobile-submissions"))
+        var request = URLRequest(url: baseURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(key, forHTTPHeaderField: "X-App-Key")
-        request.httpBody = try payload(for: item)
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 201 else {
-            throw CaseRepositoryError.remoteFailed("後端尚未收妥申請，資料仍留在手機；請稍後重試。")
+        guard var body = try JSONSerialization.jsonObject(with: payload(for: item)) as? [String: Any] else {
+            throw CaseRepositoryError.remoteFailed("申請資料無法建立，請檢查填寫內容。")
         }
-        return try JSONDecoder().decode(Receipt.self, from: data)
+        body["action"] = "submit"
+        body["clientKey"] = key
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw CaseRepositoryError.remoteFailed("試算表收件服務尚未回覆，資料仍留在手機；請稍後重試。")
+        }
+        let envelope = try JSONDecoder().decode(SubmissionEnvelope.self, from: data)
+        guard envelope.ok, let info = envelope.case, let token = envelope.accessToken else {
+            throw CaseRepositoryError.remoteFailed(envelope.error ?? "試算表尚未收妥申請。")
+        }
+        return Receipt(case: info, accessToken: token)
     }
 
-    static func status(caseId: String, accessToken: String, baseURL: URL, session: URLSession = .shared) async throws -> Status {
-        var request = URLRequest(url: baseURL.appending(path: "v1/cases/\(caseId)"))
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+    static func status(
+        caseId: String,
+        accessToken: String,
+        baseURL: URL,
+        clientKey: String? = AppEnvironment.configuredClientKey,
+        session: URLSession = .shared
+    ) async throws -> Status {
+        guard let key = clientKey, !key.isEmpty else {
+            throw CaseRepositoryError.remoteFailed("試算表查詢服務尚未設定。")
+        }
+        var request = URLRequest(url: baseURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "action": "status", "clientKey": key,
+            "caseId": caseId, "accessToken": accessToken,
+        ])
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             throw CaseRepositoryError.remoteFailed("暫時讀不到案件最新進度。")
         }
-        return try JSONDecoder().decode(Status.self, from: data)
+        let envelope = try JSONDecoder().decode(StatusEnvelope.self, from: data)
+        guard envelope.ok, let receivedCaseId = envelope.caseId, let status = envelope.status else {
+            throw CaseRepositoryError.remoteFailed(envelope.error ?? "暫時讀不到案件最新進度。")
+        }
+        return Status(caseId: receivedCaseId, status: status, statusNote: envelope.statusNote)
     }
 }

@@ -32,9 +32,22 @@ const DOCUMENT_COLUMN_TYPES = [
 
 function sheetText(value) {
   if (value === null || value === undefined) return '';
+  if (typeof value === 'boolean' || typeof value === 'number' || value instanceof Date) return value;
   const text = Array.isArray(value) ? value.join('、') : String(value);
   // 試算表會把這些前綴當公式；申請人輸入必須保持純文字。
   return /^[\s]*[=+\-@]/.test(text) ? "'" + text : text;
+}
+
+function sheetDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+  const date = new Date(value + 'T12:00:00');
+  return Number.isNaN(date.getTime()) ? '' : date;
+}
+
+function sheetAmount(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const number = Number(value);
+  return Number.isFinite(number) ? number : '';
 }
 
 function submissionToRow(submission, metadata) {
@@ -46,7 +59,7 @@ function submissionToRow(submission, metadata) {
   const links = metadata.documentLinks || {};
   const values = [
     metadata.caseId, metadata.submittedAt, '待審', '',
-    applicant.fullName, form.nationalID, applicant.birthDate,
+    applicant.fullName, form.nationalID, sheetDate(applicant.birthDate),
     applicant.phone, applicant.contactEmail, applicant.isHsinchuResident,
     applicant.identityCategory, applicant.specialIdentityKinds,
     applicant.culturalLanguageKinds, form.householdPostalCode,
@@ -57,8 +70,8 @@ function submissionToRow(submission, metadata) {
     purchase.subscriptionPlan, form.monthlyPeriods,
     purchase.toolCategory, purchase.toolName, purchase.vendorName,
     purchase.vendorRegionCompliant, purchase.purchaseChannel,
-    charge.purchaseDate, charge.periodStart, charge.periodEnd,
-    charge.originalCurrency, charge.originalAmount, charge.twdAmount,
+    sheetDate(charge.purchaseDate), sheetDate(charge.periodStart), sheetDate(charge.periodEnd),
+    charge.originalCurrency, sheetAmount(charge.originalAmount), sheetAmount(charge.twdAmount),
     purchase.paymentMethod, purchase.isPrepaidCreditOrToken,
     purchase.isProxyPaid, purchase.proxyPayerName,
     purchase.proxyPayerRelation,
