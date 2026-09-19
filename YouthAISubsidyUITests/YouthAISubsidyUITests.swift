@@ -22,6 +22,26 @@ final class YouthAISubsidyUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["案件時間軸"].exists)
     }
 
+    func testDemoEntryShowsFixturesAndSupplementHintWithoutAuditTrail() {
+        let app = launchReset()
+        app.tabBars.buttons["說明"].tap()
+        let demo = app.buttons["about.openDemo"]
+        for _ in 0..<8 where !demo.isHittable { app.swipeUp() }
+        demo.tap()
+        XCTAssertTrue(labeled(app, contains: "三筆驗收案例不會出現").waitForExistence(timeout: 5))
+        app.buttons["demo.fixture.CASE-DEMO-SPECIAL-002"].tap()
+        XCTAssertTrue(
+            labeled(app, contains: "不是你的申請").waitForExistence(timeout: 6)
+                || element(app, "status.demoFixture").waitForExistence(timeout: 2)
+        )
+        XCTAssertTrue(labeled(app, contains: "合成補件示範").waitForExistence(timeout: 5))
+        XCTAssertTrue(labeled(app, contains: "官方收據未見軟體公司名稱").waitForExistence(timeout: 3))
+        XCTAssertTrue(labeled(app, contains: "非正式承辦通知").exists)
+        XCTAssertFalse(app.staticTexts["案件時間軸"].exists)
+        XCTAssertFalse(labeled(app, contains: "youth-app-demo").exists)
+        XCTAssertFalse(labeled(app, contains: "backend-demo").exists)
+    }
+
     func testAboutHasNoApiUrlControl() {
         let app = launchReset()
         app.tabBars.buttons["說明"].tap()
@@ -29,8 +49,6 @@ final class YouthAISubsidyUITests: XCTestCase {
         app.swipeUp()
         app.swipeUp()
         XCTAssertTrue(labeled(app, contains: "GPT").waitForExistence(timeout: 3))
-        XCTAssertFalse(app.buttons["about.openDemo"].exists)
-        XCTAssertFalse(labeled(app, contains: "開發測試").exists)
         XCTAssertFalse(app.textFields["settings.apiBaseURL"].exists)
         XCTAssertFalse(app.buttons["settings.save"].exists)
         XCTAssertFalse(app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'http'")).firstMatch.exists)
