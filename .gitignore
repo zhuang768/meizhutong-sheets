@@ -19,5 +19,6 @@ xcuserdata/
 .env.*
 !.env.example
 Config/Secrets.xcconfig
+Config/Secrets.local.xcconfig
 testdata/
 tmp/

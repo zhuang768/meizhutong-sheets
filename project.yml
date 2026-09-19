@@ -18,8 +18,8 @@ targets:
     sources:
       - path: YouthAISubsidy
     configFiles:
-      Debug: Config/Secrets.xcconfig
-      Release: Config/Secrets.xcconfig
+      Debug: Config/Secrets.xcconfig.example
+      Release: Config/Secrets.xcconfig.example
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.meizhuhackathon.YouthAISubsidy

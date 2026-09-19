@@ -7,6 +7,9 @@ SCHEME ?= YouthAISubsidy
 generate:
 	@mkdir -p Config
 	@test -f Config/Secrets.xcconfig || cp Config/Secrets.xcconfig.example Config/Secrets.xcconfig
+	@if [ -f Config/Secrets.xcconfig ] && [ ! -f Config/Secrets.local.xcconfig ]; then \
+		grep -q '^API_CLIENT_KEY' Config/Secrets.xcconfig && cp Config/Secrets.xcconfig Config/Secrets.local.xcconfig || true; \
+	fi
 	xcodegen generate
 
 build: generate

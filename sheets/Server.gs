@@ -35,8 +35,21 @@ function setupService() {
       existing.hasNext() ? existing.next().getId() : DriveApp.createFolder('梅竹通申請附件').getId()
     );
   }
-  if (typeof onOpen === 'function') onOpen();
+  if (typeof installSpreadsheetMenuTrigger === 'function') installSpreadsheetMenuTrigger();
+  if (typeof onOpen === 'function') {
+    try { onOpen(); } catch (ignore) {}
+  }
   return '欄位、人工審查選單、AI 查核選單與附件資料夾已備妥；CLIENT_KEY 仍須另行設定。';
+}
+
+function installSpreadsheetMenuTrigger() {
+  const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!id) throw new Error('尚未設定 SPREADSHEET_ID');
+  ScriptApp.getProjectTriggers().forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'onOpen') ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger('onOpen').forSpreadsheet(id).onOpen().create();
+  return '已安裝試算表「梅竹通 AI」選單；請重新整理試算表';
 }
 
 function applyClientKeyOnce(key) {
@@ -44,6 +57,13 @@ function applyClientKeyOnce(key) {
   if (!trimmed) throw new Error('CLIENT_KEY 空白');
   PropertiesService.getScriptProperties().setProperty('CLIENT_KEY', trimmed);
   return 'CLIENT_KEY 已設定';
+}
+
+function applyOpenAiKeyOnce(key) {
+  const trimmed = String(key || '').trim();
+  if (!trimmed) throw new Error('OPENAI_API_KEY 空白');
+  PropertiesService.getScriptProperties().setProperty('OPENAI_API_KEY', trimmed);
+  return 'OPENAI_API_KEY 已設定；送件後會自動核對身分證、發票與切結書影像';
 }
 
 function doPost(e) {
@@ -126,14 +146,21 @@ function submitApplication(body) {
           aiDisplay.getRange(aiRow, 4).setValue(message);
         }
       }
-      return { ok: true, case: { caseId: caseId, status: 'submitted' }, accessToken: accessToken };
+      var receipt = { ok: true, case: { caseId: caseId, status: 'submitted' }, accessToken: accessToken };
+      lock.releaseLock();
+      try {
+        if (typeof applyAiDocumentVisionForCase === 'function') applyAiDocumentVisionForCase(book, caseId);
+      } catch (visionError) {
+        Logger.log(String(visionError.message || visionError));
+      }
+      return receipt;
     } catch (error) {
       // 只回收本次失敗操作剛建立的檔案，可由雲端硬碟垃圾桶復原。
       createdFiles.forEach(file => file.setTrashed(true));
       throw error;
     }
   } finally {
-    lock.releaseLock();
+    try { lock.releaseLock(); } catch (ignore) {}
   }
 }
 

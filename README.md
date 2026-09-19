@@ -26,7 +26,7 @@
 本機設定：
 
 1. 由試算表擁有者在 Apps Script「專案設定 → 指令碼屬性」自行設定測試專用 `CLIENT_KEY`。金鑰不要貼到聊天或提交到 Git。
-2. 複製 `Config/Secrets.xcconfig.example` 為 `Config/Secrets.xcconfig`（已列入 `.gitignore`），填入同一把測試金鑰後執行 `make generate`。不要把金鑰寫進 `project.yml` 或 Xcode 專案檔。固定 HTTPS 收件網址已在 App 專案中設定。App 不提供使用者手填網址或第二次同步按鈕。
+2. 本機收件憑證：複製 `Config/Secrets.xcconfig.example` 為 `Config/Secrets.local.xcconfig`，填入與 Apps Script `CLIENT_KEY` 相同的測試憑證。不要提交這個檔。沒有本機憑證也能先打開 Xcode；沒金鑰時送出不會寫入試算表。固定 HTTPS 收件網址已在 App 專案中設定。App 不提供使用者手填網址或第二次同步按鈕。
 3. 用一筆合成申請在實體手機按「送出申請」，核對試算表與附件連結；人工改「人工審查」分頁後，再在手機「我的案件」下拉更新。大量情境可用說明頁「送出 Excel 第 1–20 筆到試算表」，不要一次從 App 丟 5 萬筆。
 
 Apps Script 方案目前限制單檔 10 MB、單次送件附件總量 25 MB，支援 JPEG、PNG、PDF。試算表和 Drive 授權會讓程式以擁有者身分寫入資料；內含在手機程式中的測試金鑰可被逆向取得，不能當作正式受理真實證件的登入機制。
@@ -35,10 +35,10 @@ Apps Script 方案目前限制單檔 10 MB、單次送件附件總量 25 MB，�
 
 規則引擎會檢查身分證檢查碼、設籍新竹市、年齡與購買期間、官方網站、禁止預付點數、應備文件與重複身分證字號。結果只寫入「AI 查核狀態、AI 查核建議、AI 疑點、AI 信心程度」。建議會標成「建議核准／建議補件／建議駁回／需人工複核」，**人工審查決定仍由承辦人選擇**。合成測試身分證 `TEST-ID-ONLY` 不做真實檢查碼；疑點文字不回寫完整身分證字號。
 
-收據影像的多模態辨識可用 GPT 核對身分證、官方收據與親簽切結書是否與申請資料一致。把 `OPENAI_API_KEY` 寫在專案根目錄 `.env`（可複製 `.env.example`），不要貼到聊天或 Git。本機合成影像試跑：`node scripts/openai-document-audit.js`。試算表則在指令碼屬性設定同一把金鑰後，用選單「GPT 核對身分證／發票／切結書」。模型只寫 AI 四欄，不得改人工審查決定。真正把真實證件送進雲端模型前，請確認這是你要使用的 OpenAI 帳號。
+收據影像的多模態辨識可用 GPT 核對身分證、官方收據與親簽切結書是否與申請資料一致。把 `OPENAI_API_KEY` 寫在 Apps Script「專案設定 → 指令碼屬性」（也可複製 `.env.example` 到本機 `.env`）。**送件後會先自動跑規則查核；若已設定金鑰且附件在 Drive，同一筆也會自動跑 GPT 看圖。** 沒金鑰時只填規則建議，不會假裝已看過影像。試算表選單「GPT 核對身分證／發票／切結書」可補跑尚未看圖的案件，一次最多 8 筆。模型只寫 AI 四欄，不得改人工審查決定。真正把真實證件送進雲端模型前，請確認這是你要使用的 OpenAI 帳號。
 
 試算表選單「梅竹通 AI」可查核尚未查核案件、重查全部案件（仍不改人工決定）、產生 1,000 或 50,000 筆 `MZT-LOADTEST-` 合成案件，以及清除這些測試列。本機 50,000 筆請用 `make sheets-generate`，檔案在 `testdata/`。桌面 Excel 可用 `python3 scripts/export-volume-xlsx.py 50000`。Apps Script 單次執行約 6 分鐘，上萬筆會分批續跑。更新試算表程式後需自行 `clasp push` 並重新部署 Web App；不要把金鑰提交到 Git。
 
 ## 本機建置
 
-需 macOS、Xcode 與 XcodeGen。若尚未有本機憑證檔，`make generate` 會從範本建立空白的 `Config/Secrets.xcconfig`。憑證填好後再開啟產生的 Xcode 專案。測試可用 `make test`；建置可用 `make build`。不要把 `Config/Secrets.xcconfig` 加入 Git。
+需 macOS、Xcode 與 XcodeGen。直接開啟產生的 Xcode 專案即可；缺少金鑰檔不會再讓 Xcode 報「Unable to open base configuration」。本機金鑰請寫在 `Config/Secrets.local.xcconfig`。測試可用 `make test`；建置可用 `make build`。不要把金鑰檔加入 Git。

@@ -96,6 +96,33 @@ function applyAiAuditForRow(book, rowIndex) {
   return result;
 }
 
+function hasDocumentVision(row) {
+  const text = String(row[aiCol('AI 疑點')] || '');
+  return /身分證影像|發票影像|切結書未見|切結書可見|切結書姓名|影像模型未完成/.test(text);
+}
+
+function applyAiDocumentVisionForCase(book, caseId) {
+  const raw = book.getSheetByName(CASE_SHEET_NAME);
+  const rowIndex = findCaseRow(raw, caseId);
+  if (!rowIndex) return null;
+  const key = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
+  if (!key) return null;
+  const rows = raw.getDataRange().getValues();
+  const row = rows[rowIndex - 1];
+  if (!row || !row[0] || String(row[0]).indexOf(AI_LOADTEST_PREFIX) === 0) return null;
+  const idLink = String(row[aiCol('身分證正面連結')] || '');
+  if (idLink.indexOf('drive.google.com') < 0) return null;
+  if (hasDocumentVision(row)) return null;
+  const freq = nationalIdFrequency(rows.slice(1));
+  const result = auditCaseRecord(row, {
+    nationalIdCount: freq.get(normalizeNationalId(row[aiCol('身分證字號')])) || 0,
+    referenceDate: asDate(row[aiCol('送出時間')]) || new Date()
+  });
+  mergeDocumentVision(result, requestOpenAiDocumentVision(row, key));
+  writeAiResultToSheets(book, row[0], result);
+  return result;
+}
+
 function auditCaseRecord(row, options) {
   const opts = options || {};
   const findings = [];
@@ -228,6 +255,7 @@ function runAiDocumentAuditPending() {
   for (let index = 1; index < rows.length && processed < 8; index++) {
     const row = rows[index];
     if (!row[0] || String(row[0]).indexOf(AI_LOADTEST_PREFIX) === 0) continue;
+    if (hasDocumentVision(row)) continue;
     const idLink = String(row[aiCol('身分證正面連結')] || '');
     if (idLink.indexOf('drive.google.com') < 0) continue;
     const result = auditCaseRecord(row, {

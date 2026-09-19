@@ -11,14 +11,14 @@ vm.runInContext(source + `
     CASE_HEADERS, AI_VOLUME_SCENARIOS, auditCaseRecord, buildSyntheticCaseRow,
     volumeScenario, plannedNationalId, makeTaiwanId, taiwanIdChecksumOk,
     redactedModelPayload, nationalIdFrequency, applyResultToRow, formatDay,
-    claimedDocumentPayload, mergeDocumentVision
+    claimedDocumentPayload, mergeDocumentVision, hasDocumentVision
   };
 `, context);
 const {
   CASE_HEADERS, AI_VOLUME_SCENARIOS, auditCaseRecord, buildSyntheticCaseRow,
   volumeScenario, plannedNationalId, makeTaiwanId, taiwanIdChecksumOk,
   redactedModelPayload, nationalIdFrequency, applyResultToRow,
-  claimedDocumentPayload, mergeDocumentVision
+  claimedDocumentPayload, mergeDocumentVision, hasDocumentVision
 } = context.api;
 
 assert.equal(taiwanIdChecksumOk('A123456789'), true);
@@ -139,5 +139,8 @@ const mismatchedVision = mergeDocumentVision(audit(pass, { nationalIdCount: 1 })
 assert.equal(mismatchedVision.suggestion, '建議補件');
 assert.equal(mismatchedVision.findingsText.includes('A123456789'), false);
 assert.ok(mismatchedVision.findings.some(item => item.code === 'AFFIDAVIT_SIGNATURE'));
+assert.equal(hasDocumentVision(pass), false);
+applyResultToRow(pass, mismatchedVision);
+assert.equal(hasDocumentVision(pass), true);
 
 console.log('AI 查核規則、信心度分流與去識別化測試通過');
