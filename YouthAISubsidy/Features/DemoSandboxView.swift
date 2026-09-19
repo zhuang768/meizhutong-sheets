@@ -12,18 +12,6 @@ struct DemoSandboxView: View {
                     .foregroundStyle(AppTheme.muted)
                     .accessibilityIdentifier("demo.sandboxNotice")
             }
-            Section("載入欄位到填寫流程") {
-                templateButton("案例 1：一般青年／Cursor 年費", id: SyntheticFixtures.generalId)
-                    .accessibilityIdentifier("demo.loadGeneral")
-                Button("案例 1 載入並附齊合成文件") {
-                    model.loadTemplate(SyntheticFixtures.generalId, attachingSyntheticDocuments: true)
-                }
-                .accessibilityIdentifier("demo.loadGeneralReady")
-                templateButton("案例 2：特定對象／ChatGPT 月費", id: SyntheticFixtures.specialId)
-                    .accessibilityIdentifier("demo.loadSpecial")
-                templateButton("案例 3：父母代付／Claude 年費", id: SyntheticFixtures.proxyId)
-                    .accessibilityIdentifier("demo.loadProxy")
-            }
             Section("送到試算表（Excel 第 1–20 筆）") {
                 Text("與桌面 Excel 前 20 筆同一組合成情境。按一下會走正式送件契約寫入試算表，並附合成身分證、發票與切結書；其中 3 筆影像刻意不符，方便 GPT 查核。App 不會核准或駁回。未連接收件服務時不會假裝已送出。")
                     .font(.footnote)
@@ -38,6 +26,18 @@ struct DemoSandboxView: View {
                 if model.isSubmittingSpreadsheetBatch {
                     ProgressView()
                 }
+            }
+            Section("載入欄位到填寫流程") {
+                templateButton("案例 1：一般青年／Cursor 年費", id: SyntheticFixtures.generalId)
+                    .accessibilityIdentifier("demo.loadGeneral")
+                Button("案例 1 載入並附齊合成文件") {
+                    model.loadTemplate(SyntheticFixtures.generalId, attachingSyntheticDocuments: true)
+                }
+                .accessibilityIdentifier("demo.loadGeneralReady")
+                templateButton("案例 2：特定對象／ChatGPT 月費", id: SyntheticFixtures.specialId)
+                    .accessibilityIdentifier("demo.loadSpecial")
+                templateButton("案例 3：父母代付／Claude 年費", id: SyntheticFixtures.proxyId)
+                    .accessibilityIdentifier("demo.loadProxy")
             }
             Section("查看合成案件狀態（非正式）") {
                 ForEach(model.demoFixtures) { item in

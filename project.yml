@@ -39,6 +39,7 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SWIFT_EMIT_LOC_STRINGS: YES
         INFOPLIST_KEY_APIBaseURL: "$(API_BASE_URL)"
+        INFOPLIST_KEY_UIUserInterfaceStyle: Light
         API_BASE_URL: "https://script.google.com/macros/s/AKfycbwyAHxQL64Wuv5f75N6BSu4fKhqUOZ4ISAB4mtSQ48x_cVCaP2vf8TJF1YIsLy746vfqg/exec"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 668963PNG9
@@ -46,6 +47,7 @@ targets:
       path: YouthAISubsidy/Info.plist
       properties:
         UILaunchScreen: {}
+        UIUserInterfaceStyle: Light
         APIBaseURL: "$(API_BASE_URL)"
         APIClientKey: "$(API_CLIENT_KEY)"
         ITSAppUsesNonExemptEncryption: false

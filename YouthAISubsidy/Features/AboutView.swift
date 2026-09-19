@@ -38,7 +38,7 @@ struct AboutView: View {
                     .foregroundStyle(AppTheme.muted)
             }
             Section("開發測試") {
-                NavigationLink("合成測試案例") { DemoSandboxView() }
+                NavigationLink("合成測試案例（含送 20 筆到試算表）") { DemoSandboxView() }
                     .accessibilityIdentifier("about.openDemo")
             }
         }

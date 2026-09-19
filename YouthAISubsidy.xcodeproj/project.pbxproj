@@ -611,6 +611,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "從相簿選取申請附件並在手機辨識；確認後才儲存。送出申請時，附件會傳至試算表收件服務。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -645,6 +646,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "從相簿選取申請附件並在手機辨識；確認後才儲存。送出申請時，附件會傳至試算表收件服務。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
