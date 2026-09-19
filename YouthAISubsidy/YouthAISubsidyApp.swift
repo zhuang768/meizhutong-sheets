@@ -14,6 +14,7 @@ struct YouthAISubsidyApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .preferredColorScheme(.light)
                 .environment(\.locale, Locale(identifier: "zh_TW"))
                 .environment(\.font, .custom("PingFangTC-Regular", size: 17, relativeTo: .body))
         }

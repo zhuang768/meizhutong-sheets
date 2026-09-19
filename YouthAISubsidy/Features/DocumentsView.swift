@@ -199,11 +199,26 @@ struct DocumentsView: View {
                     #endif
                 }
                 .accessibilityIdentifier("documents.camera.\(type.rawValue)")
-                if let attached {
-                    Button("預覽") {
+                let light = attached == nil ? AppTheme.danger : AppTheme.accent
+                Button {
+                    if let attached {
                         previewDocument = attached
+                    } else {
+                        model.banner = "尚未附上「\(type.zhTitle)」，請先選擇檔案、拍照或使用合成檔。"
                     }
-                    .accessibilityIdentifier("documents.preview.\(type.rawValue)")
+                } label: {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(light)
+                            .frame(width: 10, height: 10)
+                            .shadow(color: light.opacity(0.7), radius: 3)
+                        Text("預覽")
+                    }
+                }
+                .buttonStyle(DocumentActionStyle(tint: light, restingOpacity: 0.14))
+                .accessibilityValue(attached == nil ? "尚未附上" : "已附上")
+                .accessibilityIdentifier("documents.preview.\(type.rawValue)")
+                if attached != nil {
                     Button("移除", role: .destructive) {
                         model.removeDocument(type)
                     }
@@ -253,11 +268,14 @@ struct DocumentsView: View {
 }
 
 private struct DocumentActionStyle: ButtonStyle {
+    var tint: Color = AppTheme.primary
+    var restingOpacity: Double = 0.06
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(maxWidth: .infinity, minHeight: 44)
             .contentShape(Rectangle())
-            .background(AppTheme.primary.opacity(configuration.isPressed ? 0.18 : 0.06))
+            .background(tint.opacity(configuration.isPressed ? restingOpacity + 0.12 : restingOpacity))
             .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }

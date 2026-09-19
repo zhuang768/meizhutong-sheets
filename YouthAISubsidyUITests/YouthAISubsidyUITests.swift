@@ -145,6 +145,31 @@ final class YouthAISubsidyUITests: XCTestCase {
         XCTAssertFalse(app.textFields["Mac 測試網址"].exists)
     }
 
+    @MainActor
+    func testAwarenessCardOpensZoomableViewer() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-autoload-general"]
+        app.launch()
+        for _ in 0..<3 { advance(app) }
+        let card = app.buttons["awareness.zoom.awareness-1"]
+        XCTAssertTrue(card.waitForExistence(timeout: 6))
+        card.tap()
+
+        let image = element(app, "awareness.zoom.image")
+        XCTAssertTrue(image.waitForExistence(timeout: 5))
+        let fitWidth = image.frame.width
+        image.doubleTap()
+        let deadline = Date().addingTimeInterval(3)
+        while image.frame.width <= fitWidth * 1.5 && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        XCTAssertGreaterThan(image.frame.width, fitWidth * 1.5)
+
+        app.buttons["awareness.zoom.close"].tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, "awareness.zoom.image").exists)
+    }
+
     private func launchReset() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-reset"]
@@ -187,12 +212,16 @@ final class YouthAISubsidyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["documents.preview.close"].waitForExistence(timeout: 5))
         app.buttons["documents.preview.close"].tap()
         app.buttons["documents.remove.idFront"].tap()
-        XCTAssertFalse(app.buttons["documents.preview.idFront"].exists)
+        XCTAssertFalse(app.buttons["documents.remove.idFront"].exists)
+        XCTAssertEqual(app.buttons["documents.preview.idFront"].value as? String, "尚未附上")
+        app.buttons["documents.preview.idFront"].tap()
+        XCTAssertTrue(labeled(app, contains: "尚未附上「身分證正面」").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["documents.preview.close"].exists)
         XCTAssertTrue(app.buttons["documents.pickFile.idFront"].exists)
         app.buttons["documents.camera.idFront"].tap()
         XCTAssertTrue(labeled(app, contains: "此裝置無法使用相機").waitForExistence(timeout: 5))
         app.buttons["documents.synthetic.idFront"].tap()
-        XCTAssertTrue(app.buttons["documents.preview.idFront"].exists)
+        XCTAssertEqual(app.buttons["documents.preview.idFront"].value as? String, "已附上")
     }
 
     private func demoBannerExists(in app: XCUIApplication) -> Bool {
