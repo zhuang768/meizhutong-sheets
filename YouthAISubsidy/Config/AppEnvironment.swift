@@ -73,9 +73,4 @@ enum AppEnvironment {
     static func discardStaleConnectionSettings() {
         UserDefaults.standard.removeObject(forKey: apiBaseURLDefaultsKey)
     }
-
-    static func setBaseURLString(_ raw: String) {
-        _ = raw
-        UserDefaults.standard.removeObject(forKey: apiBaseURLDefaultsKey)
-    }
 }

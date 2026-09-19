@@ -19,6 +19,8 @@ final class ApplicationFlowModel {
     var banner: String?
     var lastSubmittedId: String?
     var isEditingFromSummary = false
+    var spreadsheetBatchSubmittedCount = 0
+    var isSubmittingSpreadsheetBatch = false
     private let repository: any CaseRepository
 
     func editFromSummary(_ target: WizardStep) {
@@ -197,7 +199,7 @@ final class ApplicationFlowModel {
     }
 
     func resetOwnDemoCases() async {
-        guard !isBusy, !isImportingAttachment else { return }
+        guard !isBusy, !isImportingAttachment, !isSubmittingSpreadsheetBatch else { return }
         DemoCaseStore.shared.resetOwnCases()
         LocalAttachmentStore.removeAll()
         draft = .blank()
@@ -211,6 +213,48 @@ final class ApplicationFlowModel {
 
     func resetDemoStore() async {
         await resetOwnDemoCases()
+    }
+
+    func loadSpreadsheetBatchProgress() {
+        spreadsheetBatchSubmittedCount = SyntheticLoadTest.submittedIds().count
+    }
+
+    /// 把 Excel 第 1–20 筆合成案件經收件契約寫入試算表。未連接時不會假裝已送出。
+    func submitSpreadsheetBatch() async {
+        guard !isSubmittingSpreadsheetBatch, !isBusy, !isImportingAttachment else { return }
+        loadSpreadsheetBatchProgress()
+        guard repository.writesToSpreadsheet else {
+            banner = repository is UnconfiguredSubmissionRepository
+                ? "收件憑證尚未設定，這 20 筆沒有寫入試算表。"
+                : "尚未連接試算表收件服務，這 20 筆沒有寫入試算表。"
+            return
+        }
+        let batch = SyntheticLoadTest.nextBatch()
+        guard !batch.isEmpty else {
+            banner = "Excel 第 1–20 筆已送過試算表，不會新增第二筆。"
+            return
+        }
+        isSubmittingSpreadsheetBatch = true
+        defer { isSubmittingSpreadsheetBatch = false }
+        var sent = 0
+        do {
+            for prepared in batch {
+                var item = prepared.item
+                try SyntheticLoadTest.attachDocuments(to: &item, variant: prepared.variant)
+                _ = try await repository.submit(item)
+                SyntheticLoadTest.markSubmitted(item.caseId)
+                sent += 1
+                spreadsheetBatchSubmittedCount = SyntheticLoadTest.submittedIds().count
+                banner = "已送出 \(spreadsheetBatchSubmittedCount) / \(SyntheticLoadTest.importCap) 筆到試算表。"
+            }
+            await refreshCases()
+            banner = "試算表已收妥 \(spreadsheetBatchSubmittedCount) 筆合成申請與附件；App 沒有自行核准或駁回。"
+        } catch {
+            await refreshCases()
+            banner = sent == 0
+                ? error.localizedDescription
+                : "已送出 \(spreadsheetBatchSubmittedCount) 筆後中斷：\(error.localizedDescription) 尚未寫入的不會假裝成功。"
+        }
     }
 
     private func attachLocalFile(type: DocumentType, data: Data, isSynthetic: Bool) {

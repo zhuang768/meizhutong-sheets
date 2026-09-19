@@ -2,6 +2,14 @@ import Foundation
 import UIKit
 
 enum SyntheticDocumentFactory {
+    static func makeImage(
+        type: DocumentType,
+        item: SubsidyCase,
+        variant: SyntheticLoadTest.DocumentVariant = .match
+    ) -> Data {
+        makeClaimedSample(type: type, item: item, variant: variant)
+    }
+
     static func makeImage(type: DocumentType, caseId: String) -> Data {
         if type == .idFront || type == .idBack || type == .officialReceipt {
             return makeScannableSample(type: type)
@@ -73,5 +81,75 @@ enum SyntheticDocumentFactory {
             }
         }
         return image.pngData() ?? Data()
+    }
+
+    /// 依申請欄位產生合成影像，供試算表 GPT 比對；不符／未簽情境會刻意寫錯。
+    private static func makeClaimedSample(
+        type: DocumentType,
+        item: SubsidyCase,
+        variant: SyntheticLoadTest.DocumentVariant
+    ) -> Data {
+        let applicant = item.applicant
+        let purchase = item.purchase
+        let idName = variant == .idMismatch ? "合成不符姓名" : applicant.fullName
+        let receiptTool = variant == .receiptMismatch ? "不符工具名稱" : purchase.toolName
+        let receiptAmount = variant == .receiptMismatch ? "1" : NSDecimalNumber(decimal: purchase.originalAmount.value).stringValue
+        let signed = variant != .unsignedAffidavit
+        let lines: [String]
+        switch type {
+        case .idFront:
+            lines = [
+                "SYNTHETIC DOCUMENT - NOT REAL",
+                "姓名 Name: \(idName)",
+                "出生 Birth: \(ROCDate.isoDay(applicant.birthDate).replacingOccurrences(of: "-", with: "/"))",
+                "測試代碼 ID: \(item.formFields.nationalID.isEmpty ? "MISSING" : item.formFields.nationalID)"
+            ]
+        case .idBack:
+            lines = [
+                "SYNTHETIC DOCUMENT - NOT REAL",
+                "戶籍 Address: \(applicant.householdAddress)",
+                "郵遞區號 ZIP: \(item.formFields.householdPostalCode)"
+            ]
+        case .officialReceipt, .twdConversionProof, .paymentProof:
+            lines = [
+                "SYNTHETIC RECEIPT - NOT REAL",
+                "購買人 Buyer: \(applicant.fullName)",
+                "工具 Tool: \(receiptTool)",
+                "賣方 Vendor: \(purchase.vendorName)",
+                "購買日 Date: \(ROCDate.isoDay(purchase.purchaseDate).replacingOccurrences(of: "-", with: "/"))",
+                "金額 Amount: \(purchase.originalCurrency) \(receiptAmount)",
+                "臺幣 TWD: \(NSDecimalNumber(decimal: purchase.twdPaidAmount.value).stringValue)"
+            ]
+        case .signedAffidavit, .proxyPaymentAffidavit:
+            lines = [
+                "SYNTHETIC AFFIDAVIT - NOT REAL",
+                "申請人 Applicant: \(applicant.fullName)",
+                signed ? "簽名 Signature: \(applicant.fullName)" : "簽名 Signature: （空白未簽）"
+            ]
+        default:
+            lines = [
+                "SYNTHETIC DOCUMENT - NOT REAL",
+                "案件：\(item.caseId)",
+                "類型：\(type.zhTitle)",
+                "申請人：\(applicant.fullName)"
+            ]
+        }
+        let height = CGFloat(120 + lines.count * 64)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1100, height: height))
+        let image = renderer.image { context in
+            UIColor(red: 0.97, green: 0.98, blue: 1, alpha: 1).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 1100, height: height))
+            UIColor(red: 0.12, green: 0.25, blue: 0.69, alpha: 1).setStroke()
+            context.cgContext.setLineWidth(7)
+            context.cgContext.stroke(CGRect(x: 18, y: 18, width: 1064, height: height - 36))
+            for (index, line) in lines.enumerated() {
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: index == 0 ? UIFont.boldSystemFont(ofSize: 28) : UIFont.systemFont(ofSize: 26),
+                    .foregroundColor: UIColor.black
+                ]
+                line.draw(in: CGRect(x: 48, y: 48 + CGFloat(index) * 58, width: 1000, height: 52), withAttributes: attributes)
+            }
+        }
+        return image.jpegData(compressionQuality: 0.72) ?? Data()
     }
 }

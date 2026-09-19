@@ -80,8 +80,6 @@ final class AppEnvironmentTests: XCTestCase {
         XCTAssertNotEqual(AppEnvironment.configuredBaseURL?.host, "stale.example.test", "手機舊設定不能覆蓋建置時網址")
         AppEnvironment.discardStaleConnectionSettings()
         XCTAssertNil(UserDefaults.standard.string(forKey: AppEnvironment.apiBaseURLDefaultsKey))
-        AppEnvironment.setBaseURLString("https://should-be-ignored.example.test")
-        XCTAssertNil(UserDefaults.standard.string(forKey: AppEnvironment.apiBaseURLDefaultsKey))
     }
 
     func testConfiguredServiceWithoutCredentialNeverSubmitsLocally() async throws {

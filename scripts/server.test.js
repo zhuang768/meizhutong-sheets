@@ -55,6 +55,9 @@ const book = {
 };
 const context = vm.createContext({
   Set,
+  Map,
+  Date,
+  Logger: { log() {} },
   SpreadsheetApp: { openById: () => book },
   PropertiesService: { getScriptProperties: () => ({
     getProperty: key => properties.get(key), setProperty: (key, value) => properties.set(key, value)
@@ -72,7 +75,7 @@ const context = vm.createContext({
     createTextOutput: text => ({ text, setMimeType() { return this; } })
   }
 });
-const scripts = ['Schema.gs', 'Server.gs'].map(name =>
+const scripts = ['Schema.gs', 'Server.gs', 'AiAudit.gs'].map(name =>
   fs.readFileSync(path.join(__dirname, '..', 'sheets', name), 'utf8')).join('\n');
 vm.runInContext(scripts + '\nthis.api = { CASE_HEADERS, doPost, onEdit, assertCaseHeaders, assertDisplaySheets };', context);
 const { CASE_HEADERS, doPost, onEdit, assertCaseHeaders, assertDisplaySheets } = context.api;
@@ -104,8 +107,10 @@ assert.equal(summarySheet.rows[1][2], '測試申請人');
 assert.equal(summarySheet.rows[1][4], 650);
 assert.equal(applicantSheet.rows[1][1], '測試申請人');
 assert.equal(attachmentsSheet.rows[1][0], received.case.caseId);
-assert.equal(aiSheet.rows[1][1], '尚未查核');
+assert.equal(aiSheet.rows[1][1], '已查核');
+assert.match(String(aiSheet.rows[1][2]), /^建議|^需人工/);
 assert.equal(reviewSheet.rows[1][1], '待審');
+assert.equal(caseSheet.rows[1][CASE_HEADERS.indexOf('人工審查決定')], '待審');
 
 const retry = post(application);
 assert.equal(retry.case.caseId, received.case.caseId);

@@ -38,6 +38,7 @@ enum MobileCaseTokenStore {
 /// 草稿留在手機；只在後端回覆收件成功後才更新「我的案件」。
 struct MobileCaseRepository: CaseRepository {
     let baseURL: URL
+    var writesToSpreadsheet: Bool { true }
 
     func listCases() async throws -> [SubsidyCase] {
         let local = try await DemoCaseStore.shared.listCases()

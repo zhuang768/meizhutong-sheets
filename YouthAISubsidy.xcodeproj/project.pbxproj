@@ -30,6 +30,7 @@
 		713381A5C0425B5700D4CAC6 /* DemoCaseStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1486199A0CE573523A10EBB /* DemoCaseStoreTests.swift */; };
 		726792C99CF42C736AEA8BC2 /* CaseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7C27BB408105FABD07199A1 /* CaseRepository.swift */; };
 		7B69F84B1783F0E7659F06C3 /* FormValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AD5444D2747B9119441F1C /* FormValidatorTests.swift */; };
+		7BDFE8EF5811C73821F5F734 /* SyntheticLoadTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204687DAE6522A9801C74CF1 /* SyntheticLoadTest.swift */; };
 		84EE0475301394E949D4CEED /* LocalAttachmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E5F8754727C341B0575E6F /* LocalAttachmentStore.swift */; };
 		8A5E6A8FDF1AAC9F83FB439E /* AppEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEF7AE5C5B6E17B0637D552B /* AppEnvironmentTests.swift */; };
 		8D32AED90C5261E24198213A /* AwarenessMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2E9C5ED6D7CFEB5A35D111 /* AwarenessMaterial.swift */; };
@@ -49,6 +50,7 @@
 		D510F0C2DB90F3E3B2A4B319 /* DemoSandboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43A10D950D66CE685D1DACB /* DemoSandboxView.swift */; };
 		DC4542169DB3B71D77D5E7D8 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A26076B69CA2FF524367746 /* AboutView.swift */; };
 		E6573DB02D394E9C82F7F4A3 /* SharedContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C1C088A86541DF51146228 /* SharedContract.swift */; };
+		F3708DB37BF81F7D8FDA1ECA /* SyntheticLoadTestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A89589E56AFFB49D8FCB7C /* SyntheticLoadTestTests.swift */; };
 		FCC0CFA07CF8B3ACA574B05D /* LocalDocumentRecognition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D961661737D4404F3DBFE1A6 /* LocalDocumentRecognition.swift */; };
 /* End PBXBuildFile section */
 
@@ -76,6 +78,7 @@
 		1820904FF656CB593EE2C320 /* SyntheticDocumentFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticDocumentFactory.swift; sourceTree = "<group>"; };
 		1981B8F4160A2C3EC298AA79 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		1FA8676B67B3DA8A07E5E771 /* SubsidyEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubsidyEstimatorTests.swift; sourceTree = "<group>"; };
+		204687DAE6522A9801C74CF1 /* SyntheticLoadTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticLoadTest.swift; sourceTree = "<group>"; };
 		24AF1664E7278B070D0C36C1 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		296FCE032E89AE043A1A8CBD /* LocalAttachmentStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAttachmentStoreTests.swift; sourceTree = "<group>"; };
 		444B1DD34EDA63D3E801D0BB /* YouthPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouthPresentationTests.swift; sourceTree = "<group>"; };
@@ -115,6 +118,7 @@
 		DF09EF239ECE28AC2D62F98A /* DocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsView.swift; sourceTree = "<group>"; };
 		EEF7AE5C5B6E17B0637D552B /* AppEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironmentTests.swift; sourceTree = "<group>"; };
 		F12DE4D8281E4DEB813C7D5C /* ReviewSubmitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSubmitView.swift; sourceTree = "<group>"; };
+		F4A89589E56AFFB49D8FCB7C /* SyntheticLoadTestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticLoadTestTests.swift; sourceTree = "<group>"; };
 		F7C27BB408105FABD07199A1 /* CaseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaseRepository.swift; sourceTree = "<group>"; };
 		FCD5F11E6707565A8E05CFE3 /* CameraFrameCropTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraFrameCropTests.swift; sourceTree = "<group>"; };
 		FD024012AC3ED4F920131903 /* FormValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormValidator.swift; sourceTree = "<group>"; };
@@ -220,6 +224,7 @@
 			children = (
 				1820904FF656CB593EE2C320 /* SyntheticDocumentFactory.swift */,
 				AE84CBEDE5B1A567F9547E8E /* SyntheticFixtures.swift */,
+				204687DAE6522A9801C74CF1 /* SyntheticLoadTest.swift */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -271,6 +276,7 @@
 				D9CC0299F6B60323E97BDD6A /* LocalDocumentRecognitionTests.swift */,
 				64A5035DC2FB22CF3AA1E7C4 /* SpreadsheetTransportTests.swift */,
 				1FA8676B67B3DA8A07E5E771 /* SubsidyEstimatorTests.swift */,
+				F4A89589E56AFFB49D8FCB7C /* SyntheticLoadTestTests.swift */,
 				444B1DD34EDA63D3E801D0BB /* YouthPresentationTests.swift */,
 			);
 			path = YouthAISubsidyTests;
@@ -426,6 +432,7 @@
 				34E4FBCA8A3FA97F2CA5915B /* SubsidyEstimator.swift in Sources */,
 				4D87C13830CC57A7586B950D /* SyntheticDocumentFactory.swift in Sources */,
 				B5416F23613D8B8D14895FE7 /* SyntheticFixtures.swift in Sources */,
+				7BDFE8EF5811C73821F5F734 /* SyntheticLoadTest.swift in Sources */,
 				C70F95640649D3F4A1408438 /* Theme.swift in Sources */,
 				26C1609322AB72909620C0B6 /* YouthAISubsidyApp.swift in Sources */,
 				A944CF5C0D8090EB66DA3E3D /* YouthPresentation.swift in Sources */,
@@ -446,6 +453,7 @@
 				5FE1F536B93D4A07B462DEED /* LocalDocumentRecognitionTests.swift in Sources */,
 				2820922BB2CBA266700C0A94 /* SpreadsheetTransportTests.swift in Sources */,
 				2C74DBFF752881255804FC93 /* SubsidyEstimatorTests.swift in Sources */,
+				F3708DB37BF81F7D8FDA1ECA /* SyntheticLoadTestTests.swift in Sources */,
 				A63934EBA0CB9C46BFED70E4 /* YouthPresentationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

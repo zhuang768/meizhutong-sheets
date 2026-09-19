@@ -7,6 +7,7 @@ struct YouthAISubsidyApp: App {
         if ProcessInfo.processInfo.arguments.contains("--ui-test-reset") {
             DemoCaseStore.shared.resetOwnCases()
             LocalAttachmentStore.removeAll()
+            SyntheticLoadTest.resetProgress()
         }
     }
 

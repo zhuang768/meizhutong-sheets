@@ -1,10 +1,15 @@
 import Foundation
 
 protocol CaseRepository: Sendable {
+    var writesToSpreadsheet: Bool { get }
     func listCases() async throws -> [SubsidyCase]
     func loadCase(id: String) async throws -> SubsidyCase
     func saveDraft(_ draft: SubsidyCase) async throws -> SubsidyCase
     func submit(_ draft: SubsidyCase) async throws -> SubsidyCase
+}
+
+extension CaseRepository {
+    var writesToSpreadsheet: Bool { false }
 }
 
 enum CaseRepositoryError: LocalizedError {

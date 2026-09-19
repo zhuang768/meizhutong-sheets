@@ -17,6 +17,7 @@ xcuserdata/
 *.log
 .env
 .env.*
-! .env.example
+!.env.example
 Config/Secrets.xcconfig
-sheets/BindKey.gs
+testdata/
+tmp/

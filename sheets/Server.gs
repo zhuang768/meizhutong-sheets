@@ -35,7 +35,8 @@ function setupService() {
       existing.hasNext() ? existing.next().getId() : DriveApp.createFolder('梅竹通申請附件').getId()
     );
   }
-  return '欄位、人工審查選單與附件資料夾已備妥；CLIENT_KEY 仍須另行設定。';
+  if (typeof onOpen === 'function') onOpen();
+  return '欄位、人工審查選單、AI 查核選單與附件資料夾已備妥；CLIENT_KEY 仍須另行設定。';
 }
 
 function applyClientKeyOnce(key) {
@@ -108,6 +109,22 @@ function submitApplication(body) {
           if (last > 1 && sheet.getRange(last, 1).getValue() === caseId) sheet.deleteRow(last);
         });
         throw error;
+      }
+      try {
+        if (typeof applyAiAuditForRow === 'function') applyAiAuditForRow(book, cases.getLastRow());
+      } catch (auditError) {
+        const message = String(auditError.message || auditError);
+        const rawRow = findCaseRow(cases, caseId);
+        if (rawRow) {
+          cases.getRange(rawRow, CASE_HEADERS.indexOf('AI 查核狀態') + 1).setValue('查核失敗');
+          cases.getRange(rawRow, CASE_HEADERS.indexOf('AI 疑點') + 1).setValue(message);
+        }
+        const aiDisplay = book.getSheetByName('AI 查核');
+        const aiRow = findCaseRow(aiDisplay, caseId);
+        if (aiRow) {
+          aiDisplay.getRange(aiRow, 2).setValue('查核失敗');
+          aiDisplay.getRange(aiRow, 4).setValue(message);
+        }
       }
       return { ok: true, case: { caseId: caseId, status: 'submitted' }, accessToken: accessToken };
     } catch (error) {
