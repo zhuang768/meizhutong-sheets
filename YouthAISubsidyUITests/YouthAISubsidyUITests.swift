@@ -22,33 +22,18 @@ final class YouthAISubsidyUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["案件時間軸"].exists)
     }
 
-    func testDemoEntryShowsFixturesAndSupplementHintWithoutAuditTrail() {
-        let app = launchReset()
-        app.tabBars.buttons["說明"].tap()
-        let demo = app.buttons["about.openDemo"]
-        for _ in 0..<8 where !demo.isHittable { app.swipeUp() }
-        demo.tap()
-        XCTAssertTrue(labeled(app, contains: "三筆驗收案例不會出現").waitForExistence(timeout: 5))
-        app.buttons["demo.fixture.CASE-DEMO-SPECIAL-002"].tap()
-        XCTAssertTrue(
-            labeled(app, contains: "不是你的申請").waitForExistence(timeout: 6)
-                || element(app, "status.demoFixture").waitForExistence(timeout: 2)
-        )
-        XCTAssertTrue(labeled(app, contains: "合成補件示範").waitForExistence(timeout: 5))
-        XCTAssertTrue(labeled(app, contains: "官方收據未見軟體公司名稱").waitForExistence(timeout: 3))
-        XCTAssertTrue(labeled(app, contains: "非正式承辦通知").exists)
-        XCTAssertFalse(app.staticTexts["案件時間軸"].exists)
-        XCTAssertFalse(labeled(app, contains: "youth-app-demo").exists)
-        XCTAssertFalse(labeled(app, contains: "backend-demo").exists)
-    }
-
     func testAboutHasNoApiUrlControl() {
         let app = launchReset()
         app.tabBars.buttons["說明"].tap()
-        XCTAssertTrue(labeled(app, contains: "不是正式案件").waitForExistence(timeout: 5))
-        app.swipeUp()
-        app.swipeUp()
-        XCTAssertTrue(labeled(app, contains: "GPT").waitForExistence(timeout: 3))
+        XCTAssertTrue(labeled(app, contains: "競賽原型").waitForExistence(timeout: 5))
+        for _ in 0..<3 {
+            XCTAssertFalse(labeled(app, contains: "這不是正式案件").exists)
+            XCTAssertFalse(labeled(app, contains: "禁止把它寫進 Git").exists)
+            app.swipeUp()
+        }
+        XCTAssertTrue(labeled(app, contains: "API 網址或金鑰").waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["about.openDemo"].exists)
+        XCTAssertFalse(labeled(app, contains: "開發測試").exists)
         XCTAssertFalse(app.textFields["settings.apiBaseURL"].exists)
         XCTAssertFalse(app.buttons["settings.save"].exists)
         XCTAssertFalse(app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'http'")).firstMatch.exists)
@@ -110,7 +95,9 @@ final class YouthAISubsidyUITests: XCTestCase {
         advance(app)
 
         XCTAssertTrue(labeled(app, contains: "不是政府公告").waitForExistence(timeout: 6))
-        XCTAssertTrue(labeled(app, contains: "待設計師提供").waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["awareness.zoom.awareness-1"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["awareness.zoom.awareness-2"].waitForExistence(timeout: 3))
+        XCTAssertFalse(element(app, "awareness.placeholder.awareness-2").exists)
         advance(app)
 
         XCTAssertTrue(app.staticTexts["estimate.unofficial"].waitForExistence(timeout: 6))
@@ -151,23 +138,25 @@ final class YouthAISubsidyUITests: XCTestCase {
         app.launchArguments = ["--ui-test-reset", "--ui-test-autoload-general"]
         app.launch()
         for _ in 0..<3 { advance(app) }
-        let card = app.buttons["awareness.zoom.awareness-1"]
-        XCTAssertTrue(card.waitForExistence(timeout: 6))
-        card.tap()
+        for id in ["awareness-1", "awareness-2"] {
+            let card = app.buttons["awareness.zoom.\(id)"]
+            XCTAssertTrue(card.waitForExistence(timeout: 6), id)
+            card.tap()
 
-        let image = element(app, "awareness.zoom.image")
-        XCTAssertTrue(image.waitForExistence(timeout: 5))
-        let fitWidth = image.frame.width
-        image.doubleTap()
-        let deadline = Date().addingTimeInterval(3)
-        while image.frame.width <= fitWidth * 1.5 && Date() < deadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            let image = element(app, "awareness.zoom.image")
+            XCTAssertTrue(image.waitForExistence(timeout: 5), id)
+            let fitWidth = image.frame.width
+            image.doubleTap()
+            let deadline = Date().addingTimeInterval(3)
+            while image.frame.width <= fitWidth * 1.5 && Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            }
+            XCTAssertGreaterThan(image.frame.width, fitWidth * 1.5, id)
+
+            app.buttons["awareness.zoom.close"].tap()
+            XCTAssertTrue(card.waitForExistence(timeout: 5), id)
+            XCTAssertFalse(element(app, "awareness.zoom.image").exists, id)
         }
-        XCTAssertGreaterThan(image.frame.width, fitWidth * 1.5)
-
-        app.buttons["awareness.zoom.close"].tap()
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
-        XCTAssertFalse(element(app, "awareness.zoom.image").exists)
     }
 
     private func launchReset() -> XCUIApplication {
