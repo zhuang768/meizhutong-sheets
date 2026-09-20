@@ -157,6 +157,16 @@ final class ApplicationFlowModelTests: XCTestCase {
         XCTAssertTrue(model.draft.documents.allSatisfy { $0.isSynthetic && !$0.isUploaded && LocalAttachmentStore.loadImage(for: $0) != nil })
     }
 
+    func testIncompleteSubmitExplainsWhyItDidNotSend() async {
+        let model = ApplicationFlowModel()
+        model.startBlank()
+        await model.submit()
+        XCTAssertNil(model.lastSubmittedId)
+        XCTAssertEqual(model.draft.status, .draft)
+        XCTAssertFalse(model.issues.isEmpty)
+        XCTAssertTrue(model.banner?.contains("尚未填齊") == true)
+    }
+
     func testUnsavedRemovalDoesNotDestroySavedDraftAttachment() async throws {
         let model = ApplicationFlowModel()
         model.startBlank()

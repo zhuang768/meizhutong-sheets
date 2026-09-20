@@ -173,7 +173,10 @@ final class ApplicationFlowModel {
     func submit() async {
         guard !isBusy, !isImportingAttachment, lastSubmittedId == nil, draft.status == .draft else { return }
         issues = FormValidator.issues(for: draft)
-        guard issues.isEmpty else { return }
+        guard issues.isEmpty else {
+            banner = "尚未填齊，無法送出。請看上方紅字後再按確認送出。"
+            return
+        }
         isBusy = true
         defer { isBusy = false }
         do {

@@ -49,6 +49,7 @@ function onOpen(e) {
   try {
     const book = (e && e.source) || SpreadsheetApp.getActiveSpreadsheet();
     installMeiZhuTongMenu(book);
+    if (typeof ensureReviewSheet === 'function') ensureReviewSheet(book);
     paintDecisionColumn(book && book.getSheetByName('人工審查'), 2);
     paintDecisionColumn(book && book.getSheetByName('申請案件'), 6);
   } catch (error) {}
@@ -60,6 +61,7 @@ function installMeiZhuTongMenu(book) {
       .addItem('查核尚未查核案件（本批）', 'runAiAuditPending')
       .addItem('重查全部案件（仍不改人工決定）', 'runAiAuditAll')
       .addItem('GPT 核對身分證／發票／切結書（本批）', 'runAiDocumentAuditPending')
+      .addItem('修復人工審查下拉選單', 'ensureReviewSheetFromMenu')
       .addSeparator()
       .addItem('人工決定：淡綠（建議核准 → 核准）', 'approveAiSuggestedPass')
       .addItem('人工決定：淡黃（建議補件 → 需補件）', 'applyAiSuggestedRepair')
@@ -76,6 +78,7 @@ function installMeiZhuTongMenu(book) {
         { name: '查核尚未查核案件（本批）', functionName: 'runAiAuditPending' },
         { name: '重查全部案件（仍不改人工決定）', functionName: 'runAiAuditAll' },
         { name: 'GPT 核對身分證／發票／切結書（本批）', functionName: 'runAiDocumentAuditPending' },
+        { name: '修復人工審查下拉選單', functionName: 'ensureReviewSheetFromMenu' },
         { name: '人工決定：淡綠（建議核准 → 核准）', functionName: 'approveAiSuggestedPass' },
         { name: '人工決定：淡黃（建議補件 → 需補件）', functionName: 'applyAiSuggestedRepair' },
         { name: '人工決定：淡紅（建議駁回 → 駁回）', functionName: 'applyAiSuggestedReject' },
@@ -1039,6 +1042,7 @@ function removeLoadTestCases() {
     sheet.clearContents();
     if (kept.length) sheet.getRange(1, 1, kept.length, kept[0].length).setValues(kept);
   });
+  if (typeof ensureReviewSheet === 'function') ensureReviewSheet(book);
   return '已清除 ' + removed + ' 筆合成壓力測試案件';
 }
 

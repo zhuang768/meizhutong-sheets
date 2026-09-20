@@ -28,6 +28,7 @@ assert.equal(row[CASE_HEADERS.indexOf('身分證正面連結')], 'https://exampl
 assert.equal(row[CASE_HEADERS.indexOf('收據已註明購買人')], true);
 assert.equal(row[CASE_HEADERS.indexOf('收據有軟體名稱')], true);
 assert.equal(row[CASE_HEADERS.indexOf('收據有公司名稱')], false);
+assert.equal(CASE_HEADERS.slice(65, 68).join(','), '人工審查決定,承辦備註,決定時間');
 assert.equal(row[CASE_HEADERS.indexOf('人工審查決定')], '待審');
 assert.equal(sheetText('=IMPORTXML("x", "y")'), "'=IMPORTXML(\"x\", \"y\")");
 const findings = splitAiFindings('合成測試身分證字號，未做真實檢查碼檢核；預估補助 320 元；切結書未見手寫簽名');

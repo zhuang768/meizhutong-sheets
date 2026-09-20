@@ -16,15 +16,13 @@ function setupService() {
   if (!cases) throw new Error('找不到原始資料工作表（_原始資料_69欄）');
   assertCaseHeaders(cases);
   if (typeof ensureAiDisplaySheet === 'function') ensureAiDisplaySheet();
+  if (typeof ensureReviewSheet === 'function') ensureReviewSheet(book);
   assertDisplaySheets(book);
   const tokenSheet = book.getSheetByName(TOKEN_SHEET_NAME) || book.insertSheet(TOKEN_SHEET_NAME);
   if (tokenSheet.getLastRow() === 0) {
     tokenSheet.appendRow(['送件識別碼', '案件編號', '查詢憑證雜湊']);
   }
   tokenSheet.hideSheet();
-  const rule = SpreadsheetApp.newDataValidation().requireValueInList(DECISIONS, true).setAllowInvalid(false).build();
-  const review = book.getSheetByName('人工審查');
-  review.getRange(2, 2, Math.max(review.getMaxRows() - 1, 1), 1).setDataValidation(rule);
   properties.setProperty('SPREADSHEET_ID', book.getId());
   if (!properties.getProperty('TOKEN_SECRET')) {
     properties.setProperty('TOKEN_SECRET', Utilities.getUuid() + Utilities.getUuid());
@@ -150,17 +148,8 @@ function submitApplication(body) {
           aiDisplay.getRange(aiRow, 4).setValue(message);
         }
       }
-      var receipt = { ok: true, case: { caseId: caseId, status: 'submitted' }, accessToken: accessToken };
-      lock.releaseLock();
-      try {
-        if (typeof applyAiDocumentVisionForCase === 'function') applyAiDocumentVisionForCase(book, caseId);
-      } catch (visionError) {
-        Logger.log(String(visionError.message || visionError));
-      }
-      try {
-        if (typeof applySpreadsheetPresentation === 'function') applySpreadsheetPresentation(book);
-      } catch (ignore) {}
-      return receipt;
+      // 先回覆 App，避免 GPT 看圖或整表上色把 Web App 拖到逾時，青年端會以為送不出。
+      return { ok: true, case: { caseId: caseId, status: 'submitted' }, accessToken: accessToken };
     } catch (error) {
       // 只回收本次失敗操作剛建立的檔案，可由雲端硬碟垃圾桶復原。
       createdFiles.forEach(file => file.setTrashed(true));

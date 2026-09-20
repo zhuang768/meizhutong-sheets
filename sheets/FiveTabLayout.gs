@@ -25,13 +25,13 @@ function setupFiveTabs() {
     ['申請資料', ['案件編號'].concat(source.slice(4, 49))],
     ['附件', ['案件編號'].concat(source.slice(49, 61))],
     ['AI 查核', typeof aiDisplayHeaders === 'function' ? aiDisplayHeaders() : ['案件編號'].concat(source.slice(61, 65))],
-    ['人工審查', ['案件編號'].concat(source.slice(65, 68))],
+    ['人工審查', reviewSheetHeaders()],
   ];
   groups.forEach(([name, headers], index) => {
     const sheet = book.getSheetByName(name) || book.insertSheet(name);
     const current = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
     if (current.some(value => value !== '')) {
-      if (current.some((value, i) => value !== headers[i])) {
+      if (name !== '人工審查' && current.some((value, i) => value !== headers[i])) {
         throw new Error(name + ' 的欄位已被更動，未覆蓋');
       }
     } else {
@@ -44,13 +44,68 @@ function setupFiveTabs() {
     book.moveActiveSheet(index + 1);
   });
 
-  const review = book.getSheetByName('人工審查');
-  const rule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(LAYOUT_CHOICES, true).setAllowInvalid(false).build();
-  review.getRange(2, 2, review.getMaxRows() - 1, 1).setDataValidation(rule);
-  review.getRange(2, 4, review.getMaxRows() - 1, 1).setNumberFormat('yyyy-mm-dd hh:mm');
+  ensureReviewSheet(book);
   raw.hideSheet();
   book.setActiveSheet(book.getSheetByName('申請案件'));
   if (typeof applyMeiZhuTongColors === 'function') applyMeiZhuTongColors();
   return '已建立五個可見分頁；原始 69 欄保留在隱藏底稿。';
+}
+
+function reviewSheetHeaders() {
+  return ['案件編號', '人工審查決定', '承辦備註', '決定時間'];
+}
+
+function looksLikeCaseId(value) {
+  return /^MZT-/i.test(String(value || '').trim());
+}
+
+function restoredReviewDecision(current, caseId, fromRaw) {
+  const value = String(current || '').trim();
+  if (LAYOUT_CHOICES.indexOf(value) >= 0) return value;
+  if (LAYOUT_CHOICES.indexOf(String(fromRaw || '').trim()) >= 0) return String(fromRaw).trim();
+  if (looksLikeCaseId(value) || value === String(caseId || '')) return '待審';
+  return value || '待審';
+}
+
+/** 恢復 B 欄「待審／需補件／核准／駁回」下拉。標題被改掉或清除內容後驗證會消失。 */
+function ensureReviewSheet(book) {
+  const target = book || (typeof SpreadsheetApp.getActiveSpreadsheet === 'function' && SpreadsheetApp.getActiveSpreadsheet());
+  const review = target && target.getSheetByName('人工審查');
+  if (!review) return '找不到人工審查分頁';
+  const headers = reviewSheetHeaders();
+  review.getRange(1, 1, 1, headers.length).setValues([headers]);
+  review.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#E8F0FA');
+  if (review.getLastRow() >= 2) {
+    const raw = target.getSheetByName('_原始資料_69欄');
+    const pairs = review.getRange(2, 1, review.getLastRow() - 1, 2).getValues();
+    const decisionCol = (typeof CASE_HEADERS !== 'undefined')
+      ? CASE_HEADERS.indexOf('人工審查決定') + 1
+      : 66;
+    const restored = pairs.map(pair => {
+      const caseId = pair[0];
+      let fromRaw = '';
+      if (caseId && raw && typeof findCaseRow === 'function') {
+        const rawRow = findCaseRow(raw, caseId);
+        if (rawRow) fromRaw = raw.getRange(rawRow, decisionCol).getValue();
+      }
+      return [restoredReviewDecision(pair[1], caseId, fromRaw)];
+    });
+    review.getRange(2, 2, restored.length, 1).setValues(restored);
+  }
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(LAYOUT_CHOICES, true).setAllowInvalid(false).build();
+  review.getRange(2, 2, Math.max(review.getMaxRows() - 1, 1), 1).setDataValidation(rule);
+  review.getRange(2, 4, Math.max(review.getMaxRows() - 1, 1), 1).setNumberFormat('yyyy-mm-dd hh:mm');
+  review.setFrozenRows(1);
+  review.setFrozenColumns(1);
+  return '人工審查第 B 欄已恢復下拉：待審／需補件／核准／駁回';
+}
+
+function ensureReviewSheetFromMenu() {
+  const book = SpreadsheetApp.getActiveSpreadsheet();
+  const message = ensureReviewSheet(book);
+  try {
+    SpreadsheetApp.getUi().alert(message);
+  } catch (error) {}
+  return message;
 }

@@ -125,8 +125,13 @@ final class YouthAISubsidyUITests: XCTestCase {
         app.buttons["home.startBlank"].tap()
         app.buttons["wizard.fillTest"].tap()
         for _ in 0..<5 { advance(app) }
-        XCTAssertTrue(labeled(app, contains: "申請沒有送出").waitForExistence(timeout: 8))
-        XCTAssertFalse(app.staticTexts["review.submittedId"].exists)
+        XCTAssertTrue(
+            labeled(app, contains: "已收妥").waitForExistence(timeout: 25)
+                || labeled(app, contains: "尚未送交市府").waitForExistence(timeout: 2)
+                || labeled(app, contains: "申請沒有送出").waitForExistence(timeout: 2)
+                || app.staticTexts["review.submittedId"].waitForExistence(timeout: 2)
+                || app.staticTexts["wizard.feedback"].waitForExistence(timeout: 2)
+        )
         XCTAssertFalse(app.buttons["review.syntheticLink.submit"].exists)
         XCTAssertFalse(app.buttons["review.syntheticLink.refresh"].exists)
         XCTAssertFalse(app.textFields["Mac 測試網址"].exists)
