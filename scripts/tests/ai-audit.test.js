@@ -4,21 +4,25 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const source = ['Schema.gs', 'AiAudit.gs'].map(name =>
-  fs.readFileSync(path.join(__dirname, '..', 'sheets', name), 'utf8')).join('\n');
+  fs.readFileSync(path.join(__dirname, '..', '..', 'sheets', name), 'utf8')).join('\n');
 const context = vm.createContext({ Set, Map, Date, Number, Math, JSON, String, Array });
 vm.runInContext(source + `
   this.api = {
     CASE_HEADERS, AI_VOLUME_SCENARIOS, auditCaseRecord, buildSyntheticCaseRow,
     volumeScenario, plannedNationalId, makeTaiwanId, taiwanIdChecksumOk,
     redactedModelPayload, nationalIdFrequency, applyResultToRow, formatDay,
-    claimedDocumentPayload, mergeDocumentVision, hasDocumentVision
+    claimedDocumentPayload, mergeDocumentVision, hasDocumentVision,
+    isAiPassSuggestion, collectPendingAiPassCaseIds, collectPendingAiDecisionCaseIds,
+    matchesAiSuggestionColor, columnA1, AI_PASS_SUGGESTION
   };
 `, context);
 const {
   CASE_HEADERS, AI_VOLUME_SCENARIOS, auditCaseRecord, buildSyntheticCaseRow,
   volumeScenario, plannedNationalId, makeTaiwanId, taiwanIdChecksumOk,
   redactedModelPayload, nationalIdFrequency, applyResultToRow,
-  claimedDocumentPayload, mergeDocumentVision, hasDocumentVision
+  claimedDocumentPayload, mergeDocumentVision, hasDocumentVision,
+  isAiPassSuggestion, collectPendingAiPassCaseIds, collectPendingAiDecisionCaseIds,
+  matchesAiSuggestionColor, columnA1, AI_PASS_SUGGESTION
 } = context.api;
 
 assert.equal(taiwanIdChecksumOk('A123456789'), true);
@@ -142,5 +146,37 @@ assert.ok(mismatchedVision.findings.some(item => item.code === 'AFFIDAVIT_SIGNAT
 assert.equal(hasDocumentVision(pass), false);
 applyResultToRow(pass, mismatchedVision);
 assert.equal(hasDocumentVision(pass), true);
+
+assert.equal(isAiPassSuggestion(AI_PASS_SUGGESTION), true);
+assert.equal(isAiPassSuggestion('需人工複核'), false);
+assert.equal(matchesAiSuggestionColor('建議補件', 'repair'), true);
+assert.equal(matchesAiSuggestionColor('建議駁回（仍須人工）', 'reject'), true);
+assert.equal(matchesAiSuggestionColor('需人工複核', 'reject'), false);
+assert.equal(columnA1(1), 'A');
+assert.equal(columnA1(27), 'AA');
+const pendingPass = buildSyntheticCaseRow(0, { scenario: 'pass', nationalId: makeTaiwanId(0) });
+applyResultToRow(pendingPass, audit(pendingPass, { nationalIdCount: 1 }));
+const pendingRepair = buildSyntheticCaseRow(3, { scenario: 'missingDocs' });
+applyResultToRow(pendingRepair, audit(pendingRepair));
+const pendingReject = buildSyntheticCaseRow(4, { scenario: 'prepaid' });
+applyResultToRow(pendingReject, audit(pendingReject));
+const reviewOnly = buildSyntheticCaseRow(9, { scenario: 'duplicate', nationalId: makeTaiwanId(9) });
+applyResultToRow(reviewOnly, audit(reviewOnly, { nationalIdCount: 12 }));
+const alreadyApproved = buildSyntheticCaseRow(1, { scenario: 'pass', nationalId: makeTaiwanId(1) });
+applyResultToRow(alreadyApproved, audit(alreadyApproved, { nationalIdCount: 1 }));
+alreadyApproved[CASE_HEADERS.indexOf('人工審查決定')] = '核准';
+const ids = collectPendingAiPassCaseIds([CASE_HEADERS, pendingPass, reviewOnly, alreadyApproved], 250);
+assert.equal(ids.length, 1);
+assert.equal(String(ids[0]), String(pendingPass[0]));
+const repairIds = collectPendingAiDecisionCaseIds(
+  [CASE_HEADERS, pendingPass, pendingRepair, pendingReject, reviewOnly], 'repair', 250
+);
+assert.equal(repairIds.length, 1);
+assert.equal(String(repairIds[0]), String(pendingRepair[0]));
+const rejectIds = collectPendingAiDecisionCaseIds(
+  [CASE_HEADERS, pendingPass, pendingRepair, pendingReject, reviewOnly], 'reject', 250
+);
+assert.equal(rejectIds.length, 1);
+assert.equal(String(rejectIds[0]), String(pendingReject[0]));
 
 console.log('AI 查核規則、信心度分流與去識別化測試通過');

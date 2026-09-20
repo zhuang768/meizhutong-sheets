@@ -44,7 +44,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 668963PNG9
     info:
-      path: YouthAISubsidy/Info.plist
+      path: YouthAISubsidy/App/Info.plist
       properties:
         UILaunchScreen: {}
         UIUserInterfaceStyle: Light

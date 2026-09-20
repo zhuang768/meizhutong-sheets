@@ -30,13 +30,13 @@ simulator-boot:
 	open -a Simulator
 
 sheets-test:
-	node scripts/schema.test.js
-	node scripts/server.test.js
-	node scripts/ai-audit.test.js
-	node scripts/generate-app-batch-cases.js
+	node scripts/tests/schema.test.js
+	node scripts/tests/server.test.js
+	node scripts/tests/ai-audit.test.js
+	node scripts/generate/generate-app-batch-cases.js
 
 sheets-generate:
-	node scripts/generate-volume-cases.js 50000
+	node scripts/generate/generate-volume-cases.js 50000
 
 sheets-app-batch:
-	node scripts/generate-app-batch-cases.js
+	node scripts/generate/generate-app-batch-cases.js

@@ -15,6 +15,7 @@ function setupService() {
   const cases = book.getSheetByName(CASE_SHEET_NAME);
   if (!cases) throw new Error('找不到原始資料工作表（_原始資料_69欄）');
   assertCaseHeaders(cases);
+  if (typeof ensureAiDisplaySheet === 'function') ensureAiDisplaySheet();
   assertDisplaySheets(book);
   const tokenSheet = book.getSheetByName(TOKEN_SHEET_NAME) || book.insertSheet(TOKEN_SHEET_NAME);
   if (tokenSheet.getLastRow() === 0) {
@@ -37,19 +38,21 @@ function setupService() {
   }
   if (typeof installSpreadsheetMenuTrigger === 'function') installSpreadsheetMenuTrigger();
   if (typeof onOpen === 'function') {
-    try { onOpen(); } catch (ignore) {}
+    try { onOpen({ source: book }); } catch (ignore) {}
   }
-  return '欄位、人工審查選單、AI 查核選單與附件資料夾已備妥；CLIENT_KEY 仍須另行設定。';
+  return '欄位、人工審查選單、AI 查核選單、淡色標示與附件資料夾已備妥；CLIENT_KEY 仍須另行設定。';
 }
 
 function installSpreadsheetMenuTrigger() {
   const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
   if (!id) throw new Error('尚未設定 SPREADSHEET_ID');
   ScriptApp.getProjectTriggers().forEach(trigger => {
-    if (trigger.getHandlerFunction() === 'onOpen') ScriptApp.deleteTrigger(trigger);
+    const name = trigger.getHandlerFunction();
+    if (name === 'onOpen' || name === 'applySpreadsheetPresentationOnOpen') ScriptApp.deleteTrigger(trigger);
   });
   ScriptApp.newTrigger('onOpen').forSpreadsheet(id).onOpen().create();
-  return '已安裝試算表「梅竹通 AI」選單；請重新整理試算表';
+  ScriptApp.newTrigger('applySpreadsheetPresentationOnOpen').forSpreadsheet(id).onOpen().create();
+  return '已安裝試算表「梅竹通 AI」選單與自動上色；請重新整理試算表';
 }
 
 function applyClientKeyOnce(key) {
@@ -90,6 +93,7 @@ function submitApplication(body) {
     const cases = book.getSheetByName(CASE_SHEET_NAME);
     const tokens = book.getSheetByName(TOKEN_SHEET_NAME);
     assertCaseHeaders(cases);
+    ensureAiDisplaySheet(book);
     assertDisplaySheets(book);
     const previous = findTokenRow(tokens, body.clientSubmissionId);
     if (previous) {
@@ -153,6 +157,9 @@ function submitApplication(body) {
       } catch (visionError) {
         Logger.log(String(visionError.message || visionError));
       }
+      try {
+        if (typeof applySpreadsheetPresentation === 'function') applySpreadsheetPresentation(book);
+      } catch (ignore) {}
       return receipt;
     } catch (error) {
       // 只回收本次失敗操作剛建立的檔案，可由雲端硬碟垃圾桶復原。
@@ -209,27 +216,69 @@ function readApplicationStatus(body) {
   return { ok: true, caseId: body.caseId, status: status, statusNote: String(record[3] || '') };
 }
 
-function onEdit(e) {
-  if (!e || !e.range || e.range.getSheet().getName() !== '人工審查' ||
-      e.range.getRow() < 2 || e.range.getColumn() !== 2 ||
-      e.range.getNumRows() !== 1 || e.range.getNumColumns() !== 1) return;
-  const review = e.range.getSheet();
-  const caseId = review.getRange(e.range.getRow(), 1).getValue();
-  const decision = e.range.getValue();
-  if (!DECISIONS.includes(decision)) return;
-  const book = review.getParent();
+function applyManualDecision(book, caseId, decision) {
+  if (!DECISIONS.includes(decision)) return false;
   const sheet = book.getSheetByName(CASE_SHEET_NAME);
   const summary = book.getSheetByName('申請案件');
+  const review = book.getSheetByName('人工審查');
   const rawRow = findCaseRow(sheet, caseId);
   const summaryRow = findCaseRow(summary, caseId);
-  if (!caseId || !rawRow || !summaryRow) throw new Error('找不到對應案件，未更新審查狀態');
+  const reviewRow = findCaseRow(review, caseId);
+  if (!caseId || !rawRow || !summaryRow || !reviewRow) return false;
   const status = { '待審': '待審', '需補件': '需補件', '核准': '已核准', '駁回': '已駁回' }[decision];
   const when = decision === '待審' ? '' : new Date();
   sheet.getRange(rawRow, 66).setValue(decision);
   sheet.getRange(rawRow, 3).setValue(status);
   sheet.getRange(rawRow, 68).setValue(when);
   summary.getRange(summaryRow, 6).setValue(status);
-  review.getRange(e.range.getRow(), 4).setValue(when);
+  review.getRange(reviewRow, 2).setValue(decision);
+  review.getRange(reviewRow, 4).setValue(when);
+  const reviewCell = review.getRange(reviewRow, 2);
+  if (typeof reviewCell.setBackground === 'function') reviewCell.setBackground(colorForDecision(decision) || null);
+  const summaryCell = summary.getRange(summaryRow, 6);
+  if (typeof summaryCell.setBackground === 'function') summaryCell.setBackground(colorForDecision(status) || null);
+  return true;
+}
+
+function applyHumanDecisionsByAiColor(color, decision, label) {
+  const book = openBook();
+  const cases = book.getSheetByName(CASE_SHEET_NAME);
+  const ids = collectPendingAiDecisionCaseIds(cases.getDataRange().getValues(), color, AI_BATCH_LIMIT);
+  if (!ids.length) return '沒有「' + label + '」且仍為待審的案件';
+  if (!confirmHumanBatch(
+    '批次人工決定',
+    '將 ' + ids.length + ' 筆「' + label + '」且目前待審的案件改為「' + decision + '」。這是承辦人批次決定，不是 AI 自動核定。需人工複核的案件不會一併處理。'
+  )) {
+    return '已取消，未改任何人工審查決定';
+  }
+  let count = 0;
+  ids.forEach(id => {
+    if (applyManualDecision(book, id, decision)) count += 1;
+  });
+  applyDecisionColumnColors(book.getSheetByName('人工審查'), 2);
+  applyDecisionColumnColors(book.getSheetByName('申請案件'), 6);
+  return '已人工將 ' + count + ' 筆改為「' + decision + '」（AI 僅提供建議）';
+}
+
+function approveAiSuggestedPass() {
+  return applyHumanDecisionsByAiColor('approve', '核准', '淡綠／建議核准');
+}
+
+function applyAiSuggestedRepair() {
+  return applyHumanDecisionsByAiColor('repair', '需補件', '淡黃／建議補件');
+}
+
+function applyAiSuggestedReject() {
+  return applyHumanDecisionsByAiColor('reject', '駁回', '淡紅／建議駁回');
+}
+
+function onEdit(e) {
+  if (!e || !e.range || e.range.getSheet().getName() !== '人工審查' ||
+      e.range.getRow() < 2 || e.range.getColumn() !== 2 ||
+      e.range.getNumRows() !== 1 || e.range.getNumColumns() !== 1) return;
+  const decision = e.range.getValue();
+  const caseId = e.range.getSheet().getRange(e.range.getRow(), 1).getValue();
+  applyManualDecision(e.range.getSheet().getParent(), caseId, decision);
 }
 
 function findCaseRow(sheet, caseId) {
@@ -244,9 +293,54 @@ function displayRowsFor(row) {
     [row[0], row[1], row[4], row[26], row[35], row[2], row[3]],
     [row[0]].concat(row.slice(4, 49)),
     [row[0]].concat(row.slice(49, 61)),
-    [row[0]].concat(row.slice(61, 65)),
+    aiDisplayRow(
+      row[0],
+      row[CASE_HEADERS.indexOf('AI 查核狀態')],
+      row[CASE_HEADERS.indexOf('AI 查核建議')],
+      row[CASE_HEADERS.indexOf('AI 信心程度')],
+      splitAiFindings(row[CASE_HEADERS.indexOf('AI 疑點')])
+    ),
     [row[0]].concat(row.slice(65, 68))
   ];
+}
+
+function ensureAiDisplaySheet(book) {
+  const target = (book && typeof book.getSheetByName === 'function') ? book : openBook();
+  const sheet = target.getSheetByName('AI 查核');
+  if (!sheet) throw new Error('找不到 AI 查核分頁');
+  const headers = aiDisplayHeaders();
+  const width = Math.max(typeof sheet.getLastColumn === 'function' ? sheet.getLastColumn() : headers.length, headers.length);
+  const current = sheet.getRange(1, 1, 1, width).getValues()[0] || [];
+  if (headers.every((value, index) => current[index] === value)) {
+    if (typeof paintAiSheetColors === 'function') paintAiSheetColors(sheet);
+    return 'AI 查核已是分階段欄位，已重新上色';
+  }
+  const old = ['案件編號', 'AI 查核狀態', 'AI 查核建議', 'AI 疑點', 'AI 信心程度'];
+  const isOld = old.every((value, index) => current[index] === value);
+  const isNumbered = String(current[4] || '').indexOf('疑點') === 0;
+  const values = sheet.getLastRow() ? sheet.getDataRange().getValues() : [[]];
+  const next = [headers];
+  values.slice(1).forEach(row => {
+    if (!row || !row[0]) return;
+    if (isOld) {
+      next.push(aiDisplayRow(row[0], row[1], row[2], row[4], splitAiFindings(row[3])));
+    } else if (isNumbered) {
+      next.push(aiDisplayRow(row[0], row[1], row[2], row[3], row.slice(4).filter(Boolean)));
+    } else {
+      next.push(aiDisplayRow(row[0], row[1], row[2], row[3], splitAiFindings(row.slice(4).join('\n'))));
+    }
+  });
+  if (typeof sheet.clearContents === 'function') sheet.clearContents();
+  next.forEach((row, index) => {
+    const range = sheet.getRange(index + 1, 1, 1, row.length);
+    if (typeof range.setValues === 'function') range.setValues([row]);
+    else row.forEach((value, column) => sheet.getRange(index + 1, column + 1).setValue(value));
+  });
+  try {
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#E8F0FA');
+  } catch (ignore) {}
+  if (typeof paintAiSheetColors === 'function') paintAiSheetColors(sheet);
+  return '已把 AI 結果分成規則／身分證／發票／切結書／說明，並依核准色上色';
 }
 
 function assertDisplaySheets(book) {
@@ -254,7 +348,7 @@ function assertDisplaySheets(book) {
     ['案件編號', '送出時間', '申請人姓名', 'AI 工具名稱', '換算新臺幣', '審查狀態', '承辦公開說明'],
     ['案件編號'].concat(CASE_HEADERS.slice(4, 49)),
     ['案件編號'].concat(CASE_HEADERS.slice(49, 61)),
-    ['案件編號'].concat(CASE_HEADERS.slice(61, 65)),
+    aiDisplayHeaders(),
     ['案件編號'].concat(CASE_HEADERS.slice(65, 68))
   ];
   DISPLAY_SHEETS.forEach((name, index) => {

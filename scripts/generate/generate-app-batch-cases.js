@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const source = ['Schema.gs', 'AiAudit.gs'].map(name =>
-  fs.readFileSync(path.join(__dirname, '..', 'sheets', name), 'utf8')).join('\n');
+  fs.readFileSync(path.join(__dirname, '..', '..', 'sheets', name), 'utf8')).join('\n');
 const context = vm.createContext({ Set, Map, Date, Number, Math, JSON, String, Array });
 vm.runInContext(source + `
   this.api = {
@@ -96,7 +96,7 @@ const payload = {
 };
 
 const assetDir = path.join(
-  __dirname, '..', 'YouthAISubsidy', 'Assets.xcassets', 'SyntheticAppBatch.dataset'
+  __dirname, '..', '..', 'YouthAISubsidy', 'Assets.xcassets', 'SyntheticAppBatch.dataset'
 );
 fs.mkdirSync(assetDir, { recursive: true });
 fs.writeFileSync(path.join(assetDir, 'Contents.json'), JSON.stringify({

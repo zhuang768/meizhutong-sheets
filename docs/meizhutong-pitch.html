@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>梅竹通｜青年送得出、承辦審得動、AI 不越權</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #152033;
+      --muted: #5A6578;
+      --paper: #F3F6FB;
+      --card: #FFFFFF;
+      --blue: #1E5AA8;
+      --blue-deep: #123A73;
+      --line: #D5DEEA;
+      --ok: #2F6B4F;
+      --ok-bg: #E7F2EA;
+      --warn: #8A5A12;
+      --warn-bg: #F6EEDD;
+      --human: #8C3A32;
+      --human-bg: #F6E6E4;
+      --ai: #1E5AA8;
+      --ai-bg: #E4EEF8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: #0E1624;
+      color: var(--ink);
+      font-family: "Noto Sans TC", "PingFang TC", "Hiragino Sans CNS", sans-serif;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 4px;
+      width: 8.33%;
+      background: var(--blue);
+      z-index: 20;
+      transition: width 0.25s ease;
+    }
+
+    .slide-deck {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 48px 56px 72px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      background: var(--paper);
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .slide-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      min-height: 0;
+    }
+
+    .kicker {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--blue);
+      text-transform: none;
+    }
+
+    h1 {
+      font-size: clamp(36px, 4.4vw, 58px);
+      line-height: 1.18;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    h2 {
+      font-size: clamp(28px, 3.2vw, 42px);
+      line-height: 1.22;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .lede, p, li {
+      font-size: clamp(16px, 1.45vw, 20px);
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .lede { max-width: 42em; color: var(--ink); }
+
+    .say { display: none; }
+
+    .grid-3, .grid-4, .grid-5, .split, .steps {
+      display: grid;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-5 { grid-template-columns: repeat(5, 1fr); }
+    .split { grid-template-columns: 1fr 1fr; align-items: stretch; }
+    .steps { grid-template-columns: repeat(4, 1fr); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px 16px;
+      min-height: 0;
+    }
+
+    .card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .card p, .card li { font-size: 15px; }
+
+    .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 4px 8px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+
+    .tag-ai { background: var(--ai-bg); color: var(--ai); }
+    .tag-ok { background: var(--ok-bg); color: var(--ok); }
+    .tag-human { background: var(--human-bg); color: var(--human); }
+    .tag-warn { background: var(--warn-bg); color: var(--warn); }
+
+    .cover {
+      justify-content: flex-end;
+      background:
+        radial-gradient(circle at 85% 10%, rgba(30, 90, 168, 0.16), transparent 36%),
+        linear-gradient(180deg, #EEF3F9 0%, #F3F6FB 55%, #E7EEF7 100%);
+    }
+
+    .cover .slide-content { justify-content: flex-end; gap: 14px; }
+    .cover h1 { max-width: 14em; }
+    .meta { color: var(--muted); font-size: 16px; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .flow-item {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 14px;
+      min-width: 0;
+    }
+
+    .arrow {
+      align-self: center;
+      color: var(--blue);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .layer {
+      position: relative;
+    }
+
+    .layer .role {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
+    .big-quote {
+      font-size: clamp(28px, 3.4vw, 44px);
+      font-weight: 900;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+    }
+
+    ul.plain { padding-left: 1.1em; }
+    ul.plain li { margin: 6px 0; }
+
+    .close {
+      justify-content: center;
+      text-align: left;
+      background:
+        radial-gradient(circle at 12% 80%, rgba(30, 90, 168, 0.14), transparent 40%),
+        var(--paper);
+    }
+
+    .nav-controls {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 10;
+    }
+
+    .nav-btn {
+      width: 36px; height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--blue-deep);
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .slide-counter {
+      color: var(--muted);
+      font-size: 13px;
+      min-width: 52px;
+      text-align: center;
+    }
+
+    .hint {
+      position: absolute;
+      right: 20px;
+      bottom: 22px;
+      font-size: 12px;
+      color: #8B97A8;
+      z-index: 10;
+    }
+
+    .notes {
+      display: none;
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 58px;
+      background: rgba(21, 32, 51, 0.94);
+      color: #F4F7FB;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      line-height: 1.55;
+      z-index: 15;
+    }
+
+    body.show-notes .notes { display: block; }
+
+    @media (max-width: 520px) {
+      .slide { padding: 28px 20px 68px; }
+      .grid-3, .grid-4, .grid-5, .split, .steps { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <div class="slide-deck">
+
+    <section class="slide cover active" data-notes="我們是梅竹通。青年用手機一次送出新竹市青年 AI 工具補助申請，承辦人在 Google 試算表審查。AI 只給建議，核准或駁回一定由人決定。這是黑客松原型，還沒接市府正式系統。">
+      <div class="slide-content">
+        <div class="kicker">2026 梅竹黑客松</div>
+        <h1>梅竹通</h1>
+        <p class="lede">青年送得出、承辦審得動、AI 不越權。</p>
+        <p class="meta">新竹市 AI 領航青年數位工具補助｜iOS App × Google 試算表 × AI 輔助查核</p>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="這種補助欄位多、附件多：身分證、發票、切結書、存摺。青年容易漏填。承辦人要一筆一筆對證件，量大就容易漏。如果再做一個沒人習慣用的 Web 後台，承辦現場反而更慢。">
+      <div class="slide-content">
+        <div class="kicker">痛點</div>
+        <h2>申請很重，審查更重</h2>
+        <div class="grid-3">
+          <article class="card">
+            <div class="tag tag-warn">青年</div>
+            <h3>欄位與附件都多</h3>
+            <p>身分證、發票、切結書、存摺、付款證明。漏一項就補件，錯一項就對不上。</p>
+          </article>
+          <article class="card">
+            <div class="tag tag-warn">承辦人</div>
+            <h3>證件要逐筆對照</h3>
+            <p>表單寫的是一回事，影像上的姓名、金額、簽名又是另一回事。量大就容易漏看。</p>
+          </article>
+          <article class="card">
+            <div class="tag tag-warn">系統</div>
+            <h3>後台不一定用得上</h3>
+            <p>再做一個沒人習慣的 Web 工作台，承辦現場不會比較快。</p>
+          </article>
+        </div>
+        <p class="say">這一頁講完痛點就停。不要開始介紹功能。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="所以我們做兩端：青年用 iOS App 梅竹通填完就送；承辦人繼續用試算表。中間用 Apps Script 收件。目標就一句話：青年按一次，承辦人看一表，AI 不越權。">
+      <div class="slide-content">
+        <div class="kicker">方案</div>
+        <h2>青年按一次，承辦人看一表</h2>
+        <div class="split">
+          <article class="card">
+            <div class="tag tag-ai">青年端</div>
+            <h3>iOS App「梅竹通」</h3>
+            <p>填官方欄位、附適用文件、讀資安宣導，按一次送出。成功或失敗必須講清楚。</p>
+          </article>
+          <article class="card">
+            <div class="tag tag-ok">承辦端</div>
+            <h3>Google 試算表</h3>
+            <p>不另做 Web 工作台。收件、AI 建議、人工決定都在同一張表。</p>
+          </article>
+        </div>
+        <p class="lede">中間用 Apps Script 收件。AI 只給可追溯的查核建議，<strong style="color:var(--ink)">補件、核准、駁回一定由人決定</strong>。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="青年填資料、附文件、按送出。成功或失敗一定講清楚，沒送出就不假裝已送出。附件進 Google Drive，欄位寫進試算表。接著規則引擎先跑資格和缺件。有金鑰才讓 GPT 看圖。最後承辦人在表上選補件、核准或駁回，青年在 App 我的案件看到自己的狀態。">
+      <div class="slide-content">
+        <div class="kicker">流程</div>
+        <h2>從手機到試算表，再回到手機</h2>
+        <div class="flow">
+          <div class="flow-item"><div class="num">1</div><h3>App 送出</h3><p>填完按一次。沒送出就是沒送出。</p></div>
+          <div class="arrow">→</div>
+          <div class="flow-item"><div class="num">2</div><h3>Drive＋試算表</h3><p>附件進雲端硬碟，欄位寫入表格。</p></div>
+          <div class="arrow">→</div>
+          <div class="flow-item"><div class="num">3</div><h3>規則＋GPT</h3><p>資格缺件先跑；有金鑰才看圖。</p></div>
+          <div class="arrow">→</div>
+          <div class="flow-item"><div class="num">4</div><h3>人拍板</h3><p>承辦人決定後，App 讀回狀態。</p></div>
+        </div>
+        <p class="say">跟著箭頭講。不要在這裡展開規則細節。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="App 有申請、填寫、案件、說明。會帶青年填官方欄位，也能先在手機幫忙認身分證欄位。說明頁有兩則資安：證件不要亂傳到聊天機器人；個人 GPT 的 API key 不是市府申辦鑰匙。真機已經可以送出並寫進試算表。預估補助會顯示，但那不是核定金額。">
+      <div class="slide-content">
+        <div class="kicker">青年 App</div>
+        <h2>填得完，也送得出</h2>
+        <div class="grid-4">
+          <article class="card"><h3>申請</h3><p>開始新案件，看計畫說明。</p></article>
+          <article class="card"><h3>填寫</h3><p>申請人、購買資料、應備文件逐步帶完。</p></article>
+          <article class="card"><h3>案件</h3><p>下拉讀回自己的審查狀態。</p></article>
+          <article class="card"><h3>說明</h3><p>證件留本機；API key 不是市府鑰匙。</p></article>
+        </div>
+        <p class="lede">真機已驗證可寫入試算表。預估補助會顯示，並標明<strong style="color:var(--ink)">非正式核定</strong>。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="承辦人打開表會看到五頁。申請案件是總覽。申請資料是完整欄位。附件是 Drive 連結，照片不塞進儲存格。AI 查核只有四欄。人工審查才是人的決定。AI 不能改這一頁。">
+      <div class="slide-content">
+        <div class="kicker">承辦工作面</div>
+        <h2>一張表，五個分頁</h2>
+        <div class="grid-5">
+          <article class="card"><h3>申請案件</h3><p>總覽：編號、姓名、工具、金額、狀態。</p></article>
+          <article class="card"><h3>申請資料</h3><p>完整官方欄位。</p></article>
+          <article class="card"><h3>附件</h3><p>Drive 連結。照片不進儲存格。</p></article>
+          <article class="card"><h3>AI 查核</h3><p>狀態、建議、疑點、信心。</p></article>
+          <article class="card"><h3>人工審查</h3><p>待審／需補件／核准／駁回。</p></article>
+        </div>
+        <p class="lede">AI 只寫「AI 查核」四欄，<strong style="color:var(--human)">不能改人工審查決定</strong>。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="我們把 AI 拆三層。第一層規則：身分證檢查碼、設籍新竹市、年齡與購買期間、官方網站、預付點數、文件齊不齊、字號有沒有重複。第二層 GPT 只做三件事：身分證、發票、切結書是否與表單一致。第三層一定是人。">
+      <div class="slide-content">
+        <div class="kicker">核心主張</div>
+        <h2>規則先行，模型其次，人工最後</h2>
+        <div class="grid-3">
+          <article class="card layer">
+            <div class="role">第一層｜確定性規則</div>
+            <h3>資格與缺件</h3>
+            <p>身分證檢查碼、設籍新竹市、年齡與購買期間、官方網站、禁止預付點數、應備文件、重複字號。</p>
+          </article>
+          <article class="card layer">
+            <div class="role">第二層｜GPT 看圖</div>
+            <h3>三類文件對表單</h3>
+            <p>身分證、發票／官方收據、切結書簽名與姓名。看不清楚就標無法辨識。</p>
+          </article>
+          <article class="card layer">
+            <div class="role">第三層｜承辦人</div>
+            <h3>補件、核准、駁回</h3>
+            <p>公權力留在人。模型不得核定補助。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="因為補助是公款。模型會看錯、看不清、也會被合成圖騙。所以建議只有四種。看不清楚就寫無法辨識。疑點不回寫完整身分證字號。沒有人點下去，就沒有核准。">
+      <div class="slide-content">
+        <div class="kicker">界線</div>
+        <h2>AI 建議，人拍板</h2>
+        <div class="split">
+          <article class="card">
+            <div class="tag tag-ai">AI 可以寫</div>
+            <h3>四種建議標籤</h3>
+            <ul class="plain">
+              <li>建議核准</li>
+              <li>建議補件</li>
+              <li>建議駁回</li>
+              <li>需人工複核</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="tag tag-human">AI 不能做</div>
+            <h3>不能當成核定</h3>
+            <ul class="plain">
+              <li>不改人工審查決定</li>
+              <li>不回寫完整身分證字號</li>
+              <li>看不清不假裝看過</li>
+              <li>沒有人點，就沒有核准</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="規則引擎用五萬筆合成資料壓測，不拿 GPT 去掃五萬張圖。現場演示用 App 送二十筆合成案件，其中三筆影像刻意不符，用來證明 GPT 抓得到不一致。沒接到收件服務時，App 會說失敗。">
+      <div class="slide-content">
+        <div class="kicker">驗證</div>
+        <h2>證明跑得動，但不吹成上線</h2>
+        <div class="grid-3">
+          <article class="card">
+            <div class="tag tag-ok">規則壓測</div>
+            <h3>50,000 筆</h3>
+            <p>合成案件走資格與缺件。編號前綴 MZT-LOADTEST-，GPT 會跳過。</p>
+          </article>
+          <article class="card">
+            <div class="tag tag-ai">現場演示</div>
+            <h3>20 筆進表</h3>
+            <p>含合成身分證、發票、切結書。其中 3 筆影像刻意不符。</p>
+          </article>
+          <article class="card">
+            <div class="tag tag-warn">誠實失敗</div>
+            <h3>沒送出就說沒送出</h3>
+            <p>未連接收件服務時，App 明確失敗，不假裝已同步。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="第一，手機送出，畫面上出現成功。第二，試算表多一列，AI 查核已經有建議，附件是連結。第三，我在人工審查改狀態，回到 App 下拉，青年看得到結果。原理不要在 Demo 重講。">
+      <div class="slide-content">
+        <div class="kicker">現場 90 秒</div>
+        <h2>Demo 只做三件事</h2>
+        <div class="steps">
+          <article class="card"><div class="num">1</div><h3>App 送出</h3><p>成功訊息出現。</p></article>
+          <article class="card"><div class="num">2</div><h3>打開試算表</h3><p>新列、AI 建議、附件連結。</p></article>
+          <article class="card"><div class="num">3</div><h3>改人工審查</h3><p>App 下拉讀回狀態。</p></article>
+          <article class="card"><div class="num">加</div><h3>不符影像</h3><p>GPT 標出身分證／發票／切結書不一致。</p></article>
+        </div>
+        <p class="say">邊操作邊講這三句。原理已經在前面講完。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-notes="這是競賽原型，還沒接市府系統。測試憑證可被逆向，不能當正式登入。真實證件進雲端模型前，要確認帳號和資料流，金鑰不進 Git。Apps Script 有時間和看圖配額。手機推播還沒做。">
+      <div class="slide-content">
+        <div class="kicker">限制</div>
+        <h2>評審會問，我們先講</h2>
+        <div class="split">
+          <article class="card">
+            <h3>現在還不是</h3>
+            <ul class="plain">
+              <li>未連接市府正式申辦系統</li>
+              <li>測試憑證可被逆向，不能當正式身分驗證</li>
+              <li>手機推播尚未做</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>若要落地</h3>
+            <ul class="plain">
+              <li>正式身分驗證與承辦權限</li>
+              <li>真實證件進模型前確認帳號與資料流</li>
+              <li>金鑰不進 Git；上萬筆查核要分批</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide close" data-notes="梅竹通讓青年送得出、承辦審得動。AI 把對證件和抓缺件變快，但不把核准權交給模型。謝謝。">
+      <div class="slide-content">
+        <div class="kicker">結語</div>
+        <p class="big-quote">梅竹通讓補助審查變快，但不把公權力交給模型。</p>
+        <p class="lede">青年送得出。承辦審得動。AI 建議，人拍板。</p>
+        <p class="meta">謝謝｜梅竹通｜2026 梅竹黑客松</p>
+      </div>
+    </section>
+
+    <div class="notes" id="notes"></div>
+    <div class="nav-controls">
+      <button class="nav-btn" type="button" onclick="prevSlide()">←</button>
+      <span class="slide-counter"><span id="current">1</span> / <span id="total">12</span></span>
+      <button class="nav-btn" type="button" onclick="nextSlide()">→</button>
+    </div>
+    <div class="hint">← → 翻頁　N 講稿　F 全螢幕</div>
+  </div>
+
+  <script>
+    let current = 1;
+    const slides = document.querySelectorAll(".slide");
+    const total = slides.length;
+    document.getElementById("total").textContent = total;
+
+    function showSlide(n) {
+      if (n < 1) n = 1;
+      if (n > total) n = total;
+      current = n;
+      slides.forEach((slide, index) => {
+        slide.classList.toggle("active", index === n - 1);
+      });
+      document.getElementById("current").textContent = n;
+      document.getElementById("progressBar").style.width = (n / total * 100) + "%";
+      document.getElementById("notes").textContent = slides[n - 1].dataset.notes || "";
+    }
+
+    function nextSlide() { showSlide(current + 1); }
+    function prevSlide() { showSlide(current - 1); }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === " " || event.key === "PageDown") {
+        event.preventDefault();
+        nextSlide();
+      }
+      if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        prevSlide();
+      }
+      if (event.key === "n" || event.key === "N") {
+        document.body.classList.toggle("show-notes");
+      }
+      if (event.key === "f" || event.key === "F") {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+        } else {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    showSlide(1);
+  </script>
+</body>
+</html>

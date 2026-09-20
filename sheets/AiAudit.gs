@@ -1,5 +1,14 @@
 // 梅竹通 AI 輔助查核：規則先行、影像模型可選、人工最後決定。
-// 只寫入「AI 查核狀態／建議／疑點／信心程度」，絕不改「人工審查決定」。
+// 查核函式寫入「AI 查核」狀態、建議、信心與分欄疑點。承辦人可依顏色批次寫入核准／補件／駁回，不是 AI 自動核定。
+const AI_PASS_SUGGESTION = '建議核准（仍須人工）';
+const AI_REVIEW_SUGGESTION = '需人工複核';
+const BOOLEAN_HEADERS = [
+  '設籍新竹市', '通訊地址同戶籍', '廠商地區符合規定',
+  '預付點數或代幣', '是否由他人代付',
+  '收據已註明購買人', '帳單可證明購買品項', '已附信用卡末四碼及姓名證明',
+  '收據有軟體名稱', '收據有公司名稱', '收據有購買日期',
+  '收據有原始費用', '收據有新臺幣換算'
+];
 const AI_LOADTEST_PREFIX = 'MZT-LOADTEST-';
 const AI_SYNTHETIC_ID = 'TEST-ID-ONLY';
 const AI_BATCH_LIMIT = 250;
@@ -36,20 +45,240 @@ const AI_RECEIPT_FLAGS = [
   ['收據有新臺幣換算', '收據有新臺幣換算']
 ];
 
-function onOpen() {
+function onOpen(e) {
+  try {
+    const book = (e && e.source) || SpreadsheetApp.getActiveSpreadsheet();
+    installMeiZhuTongMenu(book);
+    paintDecisionColumn(book && book.getSheetByName('人工審查'), 2);
+    paintDecisionColumn(book && book.getSheetByName('申請案件'), 6);
+  } catch (error) {}
+}
+
+function installMeiZhuTongMenu(book) {
   try {
     SpreadsheetApp.getUi().createMenu('梅竹通 AI')
       .addItem('查核尚未查核案件（本批）', 'runAiAuditPending')
       .addItem('重查全部案件（仍不改人工決定）', 'runAiAuditAll')
       .addItem('GPT 核對身分證／發票／切結書（本批）', 'runAiDocumentAuditPending')
       .addSeparator()
+      .addItem('人工決定：淡綠（建議核准 → 核准）', 'approveAiSuggestedPass')
+      .addItem('人工決定：淡黃（建議補件 → 需補件）', 'applyAiSuggestedRepair')
+      .addItem('人工決定：淡紅（建議駁回 → 駁回）', 'applyAiSuggestedReject')
+      .addSeparator()
       .addItem('產生 1,000 筆合成壓力測試', 'seedVolumeTest1000')
       .addItem('產生 50,000 筆合成壓力測試（分批）', 'seedVolumeTest50000')
       .addItem('清除合成壓力測試資料', 'removeLoadTestCases')
       .addToUi();
-  } catch (error) {
-    // 由觸發器執行時沒有試算表 UI。
+  } catch (error) {}
+  try {
+    if (book && typeof book.addMenu === 'function') {
+      book.addMenu('梅竹通 AI', [
+        { name: '查核尚未查核案件（本批）', functionName: 'runAiAuditPending' },
+        { name: '重查全部案件（仍不改人工決定）', functionName: 'runAiAuditAll' },
+        { name: 'GPT 核對身分證／發票／切結書（本批）', functionName: 'runAiDocumentAuditPending' },
+        { name: '人工決定：淡綠（建議核准 → 核准）', functionName: 'approveAiSuggestedPass' },
+        { name: '人工決定：淡黃（建議補件 → 需補件）', functionName: 'applyAiSuggestedRepair' },
+        { name: '人工決定：淡紅（建議駁回 → 駁回）', functionName: 'applyAiSuggestedReject' },
+        { name: '產生 1,000 筆合成壓力測試', functionName: 'seedVolumeTest1000' },
+        { name: '產生 50,000 筆合成壓力測試（分批）', functionName: 'seedVolumeTest50000' },
+        { name: '清除合成壓力測試資料', functionName: 'removeLoadTestCases' }
+      ]);
+    }
+  } catch (error) {}
+}
+
+function applySpreadsheetPresentationOnOpen(e) {
+  applySpreadsheetPresentation(e && e.source);
+}
+
+function applySpreadsheetPresentation(book) {
+  try {
+    const target = (book && typeof book.getSheetByName === 'function')
+      ? book
+      : (typeof SpreadsheetApp.getActiveSpreadsheet === 'function' && SpreadsheetApp.getActiveSpreadsheet())
+        || openBook();
+    ensureAiDisplaySheet(target);
+    applyMeiZhuTongColors(target);
+  } catch (error) {}
+}
+
+function isAiPassSuggestion(value) {
+  return matchesAiSuggestionColor(value, 'approve');
+}
+
+function matchesAiSuggestionColor(value, color) {
+  const suggestion = String(value || '');
+  if (color === 'approve') return suggestion.indexOf('建議核准') === 0;
+  if (color === 'repair') return suggestion === '建議補件';
+  if (color === 'reject') return suggestion.indexOf('建議駁回') === 0;
+  return false;
+}
+
+function collectPendingAiDecisionCaseIds(rows, color, limit) {
+  const cap = Number(limit) || AI_BATCH_LIMIT;
+  const suggestionCol = CASE_HEADERS.indexOf('AI 查核建議');
+  const decisionCol = CASE_HEADERS.indexOf('人工審查決定');
+  const ids = [];
+  for (let index = 1; index < rows.length && ids.length < cap; index++) {
+    const row = rows[index];
+    if (!row || !row[0]) continue;
+    if (!matchesAiSuggestionColor(row[suggestionCol], color)) continue;
+    if (String(row[decisionCol] || '') !== '待審') continue;
+    ids.push(row[0]);
   }
+  return ids;
+}
+
+function collectPendingAiPassCaseIds(rows, limit) {
+  return collectPendingAiDecisionCaseIds(rows, 'approve', limit);
+}
+
+function columnA1(column) {
+  let n = Number(column);
+  let out = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function confirmHumanBatch(title, message) {
+  if (typeof SpreadsheetApp === 'undefined' || typeof SpreadsheetApp.getUi !== 'function') return true;
+  try {
+    const ui = SpreadsheetApp.getUi();
+    return ui.alert(title, message, ui.ButtonSet.YES_NO) === ui.Button.YES;
+  } catch (error) {
+    return true;
+  }
+}
+
+function applyMeiZhuTongColors(book) {
+  const target = (book && typeof book.getSheetByName === 'function') ? book : openBook();
+  applyBooleanColors(target.getSheetByName(CASE_SHEET_NAME));
+  applyBooleanColors(target.getSheetByName('申請資料'));
+  applyDecisionColumnColors(target.getSheetByName('申請案件'), 6);
+  applyDecisionColumnColors(target.getSheetByName('人工審查'), 2);
+  applyAiSheetColors(target.getSheetByName('AI 查核'));
+  ensureColorLegend(target);
+  return '已套用淡綠核准、淡黃補件、淡紅駁回／複核、淡藍說明';
+}
+
+function applyAiSheetColors(sheet) {
+  if (!sheet) return;
+  const width = aiDisplayHeaders().length;
+  const rows = Math.max(sheet.getMaxRows() - 1, 1);
+  const kept = [];
+  const suggestion = sheet.getRange(2, 3, rows, 1);
+  kept.push(booleanColorRule(suggestion, '=$C2="' + AI_PASS_SUGGESTION + '"', COLOR_APPROVE));
+  kept.push(booleanColorRule(suggestion, '=$C2="建議補件"', COLOR_REPAIR));
+  kept.push(booleanColorRule(suggestion, '=$C2="建議駁回（仍須人工）"', COLOR_REJECT));
+  kept.push(booleanColorRule(suggestion, '=$C2="' + AI_REVIEW_SUGGESTION + '"', COLOR_REJECT));
+  AI_STAGE_HEADERS.forEach((_, index) => {
+    const column = 5 + index;
+    const a1 = columnA1(column) + '2';
+    const range = sheet.getRange(2, column, rows, 1);
+    kept.push(booleanColorRule(range, '=REGEXMATCH(' + a1 + ',"不一致|未見手寫|不予補助|未設籍|預付|不是官方")', COLOR_REJECT));
+    kept.push(booleanColorRule(range, '=REGEXMATCH(' + a1 + ',"未填|無法辨識|請補|缺件|缺所有|格式或檢查碼")', COLOR_REPAIR));
+    kept.push(booleanColorRule(range, '=AND(' + a1 + '<>"",REGEXMATCH(' + a1 + ',"一致|可見簽名"),NOT(REGEXMATCH(' + a1 + ',"不一致")))', COLOR_APPROVE));
+    kept.push(booleanColorRule(range, '=REGEXMATCH(' + a1 + ',"合成測試|預估補助|非核定")', COLOR_NOTE));
+  });
+  sheet.setConditionalFormatRules(kept.filter(Boolean));
+  paintAiSheetColors(sheet);
+}
+
+function paintAiSheetColors(sheet) {
+  if (!sheet || sheet.getLastRow() < 2) return;
+  const width = aiDisplayHeaders().length;
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues();
+  const backgrounds = values.map(row => {
+    const colors = [];
+    for (let index = 0; index < width; index++) colors.push(null);
+    colors[2] = colorForSuggestion(row[2]) || null;
+    for (let index = 4; index < width; index++) colors[index] = colorForFindingText(row[index]) || null;
+    return colors;
+  });
+  const range = sheet.getRange(2, 1, backgrounds.length, width);
+  if (typeof range.setBackgrounds === 'function') range.setBackgrounds(backgrounds);
+}
+
+function applyDecisionColumnColors(sheet, column) {
+  if (!sheet) return;
+  try {
+    const a1 = '$' + columnA1(column) + '2';
+    const range = sheet.getRange(2, column, Math.max(sheet.getMaxRows() - 1, 1), 1);
+    const kept = [];
+    kept.push(booleanColorRule(range, '=' + a1 + '="核准"', COLOR_APPROVE));
+    kept.push(booleanColorRule(range, '=' + a1 + '="已核准"', COLOR_APPROVE));
+    kept.push(booleanColorRule(range, '=' + a1 + '="需補件"', COLOR_REPAIR));
+    kept.push(booleanColorRule(range, '=' + a1 + '="駁回"', COLOR_REJECT));
+    kept.push(booleanColorRule(range, '=' + a1 + '="已駁回"', COLOR_REJECT));
+    if (typeof sheet.setConditionalFormatRules === 'function') {
+      sheet.setConditionalFormatRules(kept.filter(Boolean));
+    }
+  } catch (error) {}
+  paintDecisionColumn(sheet, column);
+}
+
+function paintDecisionColumn(sheet, column) {
+  if (!sheet || sheet.getLastRow() < 2) return;
+  const values = sheet.getRange(2, column, sheet.getLastRow() - 1, 1).getValues();
+  const backgrounds = values.map(row => [colorForDecision(row[0]) || null]);
+  const range = sheet.getRange(2, column, backgrounds.length, 1);
+  if (typeof range.setBackgrounds === 'function') range.setBackgrounds(backgrounds);
+}
+
+function applyReviewDecisionColors() {
+  const book = (typeof SpreadsheetApp.getActiveSpreadsheet === 'function' && SpreadsheetApp.getActiveSpreadsheet())
+    || openBook();
+  applyDecisionColumnColors(book.getSheetByName('人工審查'), 2);
+  applyDecisionColumnColors(book.getSheetByName('申請案件'), 6);
+  return '已依核准／補件／駁回套上淡色';
+}
+
+function ensureColorLegend(book) {
+  if (!book || typeof book.insertSheet !== 'function') return;
+  const name = '顏色說明';
+  const sheet = book.getSheetByName(name) || book.insertSheet(name);
+  const rows = [
+    ['顏色', '意思', '用在哪'],
+    ['淡綠', '核准／通過', '建議核准、影像與資料一致、人工核准'],
+    ['淡黃', '需補件', '建議補件、缺件、看不清楚'],
+    ['淡紅', '駁回或需人工複核', '建議駁回、證件不符、未簽名、需人工複核'],
+    ['淡藍', '說明，不是決定', '合成測試身分證、預估補助金額']
+  ];
+  sheet.getRange(1, 1, rows.length, 3).setValues(rows);
+  sheet.getRange(2, 1).setBackground(COLOR_APPROVE);
+  sheet.getRange(3, 1).setBackground(COLOR_REPAIR);
+  sheet.getRange(4, 1).setBackground(COLOR_REJECT);
+  sheet.getRange(5, 1).setBackground(COLOR_NOTE);
+}
+
+function applyBooleanColors(sheet) {
+  if (!sheet || sheet.getLastRow() < 1) return;
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const kept = [];
+  BOOLEAN_HEADERS.forEach(name => {
+    const column = headers.indexOf(name) + 1;
+    if (!column) return;
+    const a1 = columnA1(column) + '2';
+    const range = sheet.getRange(2, column, Math.max(sheet.getMaxRows() - 1, 1), 1);
+    kept.push(booleanColorRule(range, '=OR(' + a1 + '=TRUE,' + a1 + '="TRUE")', COLOR_APPROVE));
+    kept.push(booleanColorRule(range, '=OR(' + a1 + '=FALSE,' + a1 + '="FALSE")', COLOR_REJECT));
+  });
+  sheet.setConditionalFormatRules(kept.filter(Boolean));
+}
+
+function booleanColorRule(range, formula, color) {
+  if (typeof SpreadsheetApp === 'undefined' || typeof SpreadsheetApp.newConditionalFormatRule !== 'function') {
+    return null;
+  }
+  return SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied(formula)
+    .setBackground(color)
+    .setRanges([range])
+    .build();
 }
 
 function runAiAuditPending() {
@@ -859,7 +1088,13 @@ function writeAiResultToSheets(book, caseId, result) {
   const display = book.getSheetByName('AI 查核');
   const displayRow = findCaseRow(display, caseId);
   if (displayRow) {
-    payload.forEach((value, offset) => display.getRange(displayRow, 2 + offset).setValue(value));
+    const cells = aiDisplayRow(caseId, result.status, result.suggestion, result.confidence, aiFindingsFromResult(result));
+    cells.forEach((value, offset) => {
+      const cell = display.getRange(displayRow, offset + 1);
+      cell.setValue(value);
+      const color = offset === 2 ? colorForSuggestion(value) : (offset >= 4 ? colorForFindingText(value) : '');
+      if (color && typeof cell.setBackground === 'function') cell.setBackground(color);
+    });
   }
 }
 

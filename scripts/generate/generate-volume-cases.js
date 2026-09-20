@@ -4,7 +4,7 @@ const vm = require('node:vm');
 
 const count = Math.max(1, Number(process.argv[2] || process.env.VOLUME_COUNT || 20000));
 const source = ['Schema.gs', 'AiAudit.gs'].map(name =>
-  fs.readFileSync(path.join(__dirname, '..', 'sheets', name), 'utf8')).join('\n');
+  fs.readFileSync(path.join(__dirname, '..', '..', 'sheets', name), 'utf8')).join('\n');
 const context = vm.createContext({ Set, Map, Date, Number, Math, JSON, String, Array });
 vm.runInContext(source + `
   this.api = {
@@ -17,7 +17,7 @@ const {
   volumeScenario, nationalIdFrequency, formatDay
 } = context.api;
 
-const outDir = path.join(__dirname, '..', 'testdata');
+const outDir = path.join(__dirname, '..', '..', 'testdata');
 fs.mkdirSync(outDir, { recursive: true });
 const stem = 'loadtest-' + count;
 const csvPath = path.join(outDir, stem + '.csv');

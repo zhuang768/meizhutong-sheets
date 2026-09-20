@@ -23,6 +23,83 @@ const CASE_HEADERS = [
   '人工審查決定', '承辦備註', '決定時間', '案件查詢代碼'
 ];
 
+const COLOR_APPROVE = '#D4E2D1';
+const COLOR_REPAIR = '#F3E6C8';
+const COLOR_REJECT = '#E6D3D1';
+const COLOR_NOTE = '#D6E3F0';
+const AI_STAGE_HEADERS = ['規則', '身分證影像', '發票影像', '切結書', '說明'];
+
+function aiDisplayHeaders() {
+  return ['案件編號', 'AI 查核狀態', 'AI 查核建議', 'AI 信心程度'].concat(AI_STAGE_HEADERS);
+}
+
+function splitAiFindings(text) {
+  return String(text || '')
+    .replace(/身分證影像/g, '；身分證影像')
+    .replace(/發票影像/g, '；發票影像')
+    .replace(/切結書/g, '；切結書')
+    .split(/[；;\n|｜]/)
+    .map(item => String(item).trim())
+    .filter(Boolean);
+}
+
+function findingStage(item) {
+  const code = String(item && item.code || '');
+  const text = String((item && item.message) || item || '');
+  if (code === 'ID_SYNTHETIC' || code === 'SUBSIDY_HINT' || code === 'VISION_ERROR') return '說明';
+  if (code.indexOf('ID_IMAGE') === 0 || /身分證影像/.test(text)) return '身分證影像';
+  if (code.indexOf('RECEIPT_IMAGE') === 0 || /發票影像/.test(text)) return '發票影像';
+  if (code.indexOf('AFFIDAVIT') === 0 || /切結書/.test(text)) return '切結書';
+  if (/合成測試|預估補助|非核定/.test(text)) return '說明';
+  return '規則';
+}
+
+function groupFindingsByStage(findings) {
+  const groups = {};
+  AI_STAGE_HEADERS.forEach(name => { groups[name] = []; });
+  (findings || []).forEach(item => {
+    const message = typeof item === 'string' ? item : (item && item.message);
+    if (!message) return;
+    const stage = findingStage(typeof item === 'string' ? { message: item } : item);
+    groups[stage].push(message);
+  });
+  return AI_STAGE_HEADERS.map(name => groups[name].join('\n'));
+}
+
+function aiDisplayRow(caseId, status, suggestion, confidence, findings) {
+  return [caseId, status || '', suggestion || '', confidence || ''].concat(groupFindingsByStage(findings));
+}
+
+function aiFindingsFromResult(result) {
+  if (result && result.findings && result.findings.length) return result.findings;
+  return splitAiFindings(result && result.findingsText);
+}
+
+function colorForSuggestion(text) {
+  const value = String(text || '');
+  if (value.indexOf('建議核准') === 0 || value === '核准' || value === '已核准') return COLOR_APPROVE;
+  if (value === '建議補件' || value === '需補件') return COLOR_REPAIR;
+  if (value.indexOf('建議駁回') === 0 || value === '需人工複核' || value === '駁回' || value === '已駁回') return COLOR_REJECT;
+  return '';
+}
+
+function colorForDecision(text) {
+  const value = String(text || '');
+  if (!value || value === '待審') return '';
+  return colorForSuggestion(value);
+}
+
+function colorForFindingText(text) {
+  const value = String(text || '');
+  if (!value) return '';
+  if (/不一致|未見手寫|不予補助|未設籍|預付|不是官方|集合式|代購|出生日期不在/.test(value)) return COLOR_REJECT;
+  if (/未填|無法辨識|請補|缺件|缺所有|缺存摺|格式或檢查碼|不是新竹市|郵遞區號/.test(value)) return COLOR_REPAIR;
+  if (/一致|可見簽名/.test(value)) return COLOR_APPROVE;
+  if (/合成測試|預估補助|非核定|影像模型未完成/.test(value)) return COLOR_NOTE;
+  if (/缺/.test(value)) return COLOR_REPAIR;
+  return COLOR_REPAIR;
+}
+
 const DOCUMENT_COLUMN_TYPES = [
   'idFront', 'idBack', 'officialReceipt', 'twdConversionProof',
   'paymentProof', 'cardLast4NamePhoto', 'passbookCover',

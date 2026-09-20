@@ -24,7 +24,7 @@ function setupFiveTabs() {
     ['申請案件', ['案件編號', '送出時間', '申請人姓名', 'AI 工具名稱', '換算新臺幣', '審查狀態', '承辦公開說明']],
     ['申請資料', ['案件編號'].concat(source.slice(4, 49))],
     ['附件', ['案件編號'].concat(source.slice(49, 61))],
-    ['AI 查核', ['案件編號'].concat(source.slice(61, 65))],
+    ['AI 查核', typeof aiDisplayHeaders === 'function' ? aiDisplayHeaders() : ['案件編號'].concat(source.slice(61, 65))],
     ['人工審查', ['案件編號'].concat(source.slice(65, 68))],
   ];
   groups.forEach(([name, headers], index) => {
@@ -51,5 +51,6 @@ function setupFiveTabs() {
   review.getRange(2, 4, review.getMaxRows() - 1, 1).setNumberFormat('yyyy-mm-dd hh:mm');
   raw.hideSheet();
   book.setActiveSheet(book.getSheetByName('申請案件'));
+  if (typeof applyMeiZhuTongColors === 'function') applyMeiZhuTongColors();
   return '已建立五個可見分頁；原始 69 欄保留在隱藏底稿。';
 }

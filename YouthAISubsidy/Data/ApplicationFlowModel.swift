@@ -208,11 +208,7 @@ final class ApplicationFlowModel {
         lastSubmittedId = nil
         selectedCase = nil
         await refreshCases()
-        banner = "已清除這支手機的申請資料；合成測試案例仍可在測試入口查看。"
-    }
-
-    func resetDemoStore() async {
-        await resetOwnDemoCases()
+        banner = "已清除這支手機的申請資料。"
     }
 
     func loadSpreadsheetBatchProgress() {

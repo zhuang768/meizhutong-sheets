@@ -76,6 +76,19 @@ def export_xlsx(count, csv_path, jsonl_path, summary_path, out_path):
             cell = WriteOnlyCell(ws, value='FALSE')
             cell.fill = false_fill
             return cell
+        text = str(value)
+        if text == '需人工複核' or text.startswith('建議駁回'):
+            cell = WriteOnlyCell(ws, value=value)
+            cell.fill = false_fill
+            return cell
+        if text.startswith('建議核准'):
+            cell = WriteOnlyCell(ws, value=value)
+            cell.fill = true_fill
+            return cell
+        if text == '建議補件':
+            cell = WriteOnlyCell(ws, value=value)
+            cell.fill = PatternFill('solid', fgColor='F3E6C8')
+            return cell
         return value
     wb = Workbook(write_only=True)
 
@@ -135,7 +148,7 @@ def export_xlsx(count, csv_path, jsonl_path, summary_path, out_path):
 
 if __name__ == '__main__':
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 50000
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     testdata = root / 'testdata'
     default_out = Path.home() / 'Desktop' / f'梅竹通-合成測試-{count}.xlsx'
     out_path = Path(sys.argv[2]) if len(sys.argv) > 2 else default_out
